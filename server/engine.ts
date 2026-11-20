@@ -7,7 +7,7 @@
 // splitting the span wherever a timed effect wears off, so the answer is the same however rarely it runs.
 import { other, SIDES, type Board, type EffectBadge, type FeedEntry, type Side, type ShopItemView, type TeamBoard, type YouInfo } from '../shared/types.js';
 import { CONFIG } from './config.js';
-import { ITEMS, rollShop, type ItemDef } from './catalog.js';
+import { baseWeights, bumpOdds, ITEMS, rollShop, MAX_EXTRA_SLOTS, type ItemDef, type MixCategory, type SlotWeights } from './catalog.js';
 
 export interface Timed {
   v: number;
@@ -43,6 +43,10 @@ interface ETeam {
   decoys: number[];
   discount: number;
   taxes: number[];
+  /** Slots added to the shop for good, and how many Odds Up upgrades the team has bought per category. */
+  extraSlots: number;
+  odds: Record<MixCategory, number>;
+  slotWeights: SlotWeights;
   // shop
   order: string[];
   cursor: number;
@@ -105,6 +109,9 @@ export class Engine {
       decoys: [],
       discount: 0,
       taxes: [],
+      extraSlots: 0,
+      odds: { economic: 0, aggressive: 0, defensive: 0 },
+      slotWeights: baseWeights(),
       order: [],
       cursor: 0,
       holder: null,
@@ -310,7 +317,7 @@ export class Engine {
       team.holderTimerEnd = now + CONFIG.shopHoldMs;
       team.nextOfferAt = null;
       const budget = Math.floor(team.clicks); // the snapshot: later earnings don't count
-      team.offer = { ids: rollShop(budget, this.rng).map((i) => i.id), budget };
+      team.offer = { ids: rollShop(budget, this.rng, { extraSlots: team.extraSlots, weights: team.slotWeights }).map((i) => i.id), budget };
       return;
     }
     team.nextOfferAt = now + 2000; // nobody connected: look again shortly
@@ -455,6 +462,15 @@ export class Engine {
         foe.rust.push({ v: e.pct / 100, from: now, until: now + e.sec * 1000 });
         say(`${who} rusted the ${foe.side} team's auto clickers (-${e.pct}% for ${e.sec}s).`);
         break;
+      case 'slot':
+        team.extraSlots = Math.min(MAX_EXTRA_SLOTS, team.extraSlots + 1);
+        say(`${who} added a slot to the shop for good (${4 + team.extraSlots} slots).`);
+        break;
+      case 'odds':
+        team.odds[e.cat]++;
+        bumpOdds(team.slotWeights, e.cat);
+        say(`${who} improved the shop's odds of ${e.cat} items.`);
+        break;
       case 'tax':
         foe.taxes.push(e.pct / 100);
         say(`${who} levied a sales tax on the ${foe.side} team's next purchase.`);
@@ -527,6 +543,8 @@ export class Engine {
     const tax = t.taxes.reduce((s, x) => s + x, 0);
     if (tax) perks.push(`Next purchase has +${Math.round(tax * 100)}% sales tax!`);
     for (const inv of t.invest) perks.push(`Investment pays ${fmt(inv.ret)} in ${Math.max(0, Math.ceil((inv.dueAt - now) / 1000))}s`);
+    if (t.extraSlots) perks.push(`Shop has ${4 + t.extraSlots} slots`);
+    for (const c of ['economic', 'aggressive', 'defensive'] as const) if (t.odds[c]) perks.push(`Shop odds: ${c} x${t.odds[c]}`);
     if (p.siphon) perks.push(`You siphon ${fmt(p.siphon)} per click`);
 
     let shop: YouInfo['shop'] = null;
@@ -534,7 +552,7 @@ export class Engine {
       const items: ShopItemView[] = t.offer.ids.map((iid) => {
         const it = ITEMS.get(iid)!;
         const { price, tax: tx } = this.priceOf(t, it);
-        return { id: it.id, name: it.name, desc: it.desc, tier: it.tier, rarity: it.rarity, cost: it.cost, price, tax: tx };
+        return { id: it.id, name: it.name, desc: it.desc, tier: it.tier, rarity: it.rarity, category: it.category, cost: it.cost, price, tax: tx };
       });
       shop = { items, budget: t.offer.budget, minUntil: t.holderTimerEnd };
     }

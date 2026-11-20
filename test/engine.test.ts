@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { Engine } from '../server/engine.js';
 import { CONFIG } from '../server/config.js';
-import { CATALOG, ITEMS, slotTiers, rollShop } from '../server/catalog.js';
+import { CATALOG, ITEMS, slotTiers, rollShop, baseWeights, bumpOdds, MAX_EXTRA_SLOTS } from '../server/catalog.js';
 
 const S = 1000;
 const roster = [
@@ -46,8 +46,68 @@ test('shop brackets match the brief', () => {
   assert.deepEqual(slotTiers(5e7), [3, 3, 3]);
   for (let i = 0; i < 200; i++) {
     const shop = rollShop(Math.floor(Math.random() * 2e6), Math.random);
-    assert.equal(new Set(shop.map((s) => s.id)).size, 3, 'no duplicates on a shelf');
+    assert.equal(shop.length, 4);
+    assert.equal(new Set(shop.map((s) => s.id)).size, 4, 'no duplicates on a shelf');
   }
+});
+
+test('shop order: auto clicker, then economic, aggressive, defensive', () => {
+  for (let i = 0; i < 300; i++) {
+    const shop = rollShop(Math.floor(Math.random() * 3e6), Math.random);
+    assert.deepEqual(shop.map((s) => s.category), ['auto', 'economic', 'aggressive', 'defensive']);
+  }
+});
+
+test('the auto clicker is one of the best three affordable, and is random among them', () => {
+  const autos = CATALOG.filter((c) => c.category === 'auto');
+  const seen = new Set<string>();
+  for (let i = 0; i < 400; i++) {
+    const clicks = 1500;
+    const pick = rollShop(clicks, Math.random)[0];
+    const best3 = autos.filter((a) => a.cost <= clicks).sort((a, b) => (b.eff as any).rate - (a.eff as any).rate).slice(0, 3);
+    assert.ok(best3.includes(pick));
+    seen.add(pick.id);
+  }
+  assert.equal(seen.size, 3, 'all three of the best get offered over time');
+  assert.equal(rollShop(0, Math.random)[0].cost, Math.min(...autos.map((a) => a.cost)), 'nothing affordable: the cheapest is shown');
+});
+
+test('odds upgrades: other slots gain the category, the home slot loses the others', () => {
+  const w = baseWeights();
+  assert.deepEqual(w.economic, { economic: 2, aggressive: 0, defensive: 0 });
+  bumpOdds(w, 'aggressive');
+  assert.equal(w.economic.aggressive, 1);
+  assert.equal(w.defensive.aggressive, 1);
+  assert.deepEqual(w.aggressive, { economic: 0, aggressive: 2, defensive: 0 }, 'the aggressive slot stays aggressive');
+  const opts = { extraSlots: 0, weights: structuredClone(w) };
+  let attacks = 0;
+  for (let i = 0; i < 300; i++) if (rollShop(2e6, Math.random, opts)[1].category === 'aggressive') attacks++;
+  assert.ok(attacks > 40 && attacks < 200, `economic slot rolled aggressive ${attacks}/300`);
+  for (let i = 0; i < 100; i++) assert.equal(rollShop(2e6, Math.random, opts)[0].category, 'auto');
+  // then economic odds: the economic slot is back to always economic; the others can roll economic
+  bumpOdds(w, 'economic');
+  assert.deepEqual(w.economic, { economic: 2, aggressive: 0, defensive: 0 });
+  assert.deepEqual(w.aggressive, { economic: 1, aggressive: 2, defensive: 0 });
+  assert.deepEqual(w.defensive, { economic: 1, aggressive: 1, defensive: 2 });
+});
+
+test('extra slots add wildcard items, capped', () => {
+  const shop = rollShop(2e6, Math.random, { extraSlots: 2, weights: baseWeights() });
+  assert.equal(shop.length, 6);
+  assert.equal(new Set(shop.map((s) => s.id)).size, 6);
+  assert.equal(rollShop(2e6, Math.random, { extraSlots: 99, weights: baseWeights() }).length, 4 + MAX_EXTRA_SLOTS);
+});
+
+test('buying the slot and odds upgrades changes the team', () => {
+  const e = mk();
+  e.teams.left.clicks = 1e6;
+  assert.ok(give(e, 'a1', id((c) => c.eff.k === 'slot' && c.tier === 1), 1 * S).ok);
+  assert.equal(e.teams.left.extraSlots, 1);
+  assert.ok(give(e, 'a1', id((c) => c.eff.k === 'odds' && (c.eff as any).cat === 'defensive' && c.tier === 1), 2 * S).ok);
+  assert.equal(e.teams.left.odds.defensive, 1);
+  assert.equal(e.teams.left.slotWeights.economic.defensive, 1);
+  assert.equal(e.teams.right.slotWeights.economic.defensive, 0);
+  assert.equal(e.teams.right.odds.defensive, 0);
 });
 
 test('catalog ids are unique and rarities set', () => {

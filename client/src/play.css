@@ -68,8 +68,6 @@ input { -webkit-user-select: text; user-select: text; }
 .clicker.left { background: radial-gradient(circle at 35% 28%, #ff8279, var(--red) 50%, var(--red-lo)); }
 .clicker.right { background: radial-gradient(circle at 35% 28%, #82b4ff, var(--blue) 50%, var(--blue-lo)); }
 .clicker.down { transform: translateY(8px) scale(0.985); box-shadow: 0 4px 0 #0d0f12, 0 0 0 4px #0d0f12, inset 0 6px 14px rgba(255, 255, 255, 0.25), inset 0 -10px 20px rgba(0, 0, 0, 0.4); }
-.clicker .cg { position: absolute; inset: 8%; width: 84%; color: rgba(0, 0, 0, 0.2); animation-duration: 14s; pointer-events: none; }
-.clicker.down .cg { animation-duration: 1.5s; }
 .clicker .label { position: relative; font-family: var(--font-display); font-weight: 700; font-size: 17cqw; letter-spacing: 0.1em; text-shadow: 0 0.04em 0 rgba(0, 0, 0, 0.45); pointer-events: none; }
 .clicker .pop { position: absolute; pointer-events: none; font-family: var(--font-display); font-weight: 700; font-size: 26px; color: var(--brass-hi); text-shadow: 0 2px 0 #000; animation: floatup 0.6s ease-out forwards; }
 @keyframes floatup { to { transform: translateY(-70px); opacity: 0; } }

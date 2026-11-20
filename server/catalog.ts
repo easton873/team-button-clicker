@@ -1,4 +1,8 @@
-import type { Rarity } from '../shared/types.js';
+import type { Rarity, ShopCategory } from '../shared/types.js';
+
+/** The three categories that the non-auto-clicker shop slots roll from. */
+export type MixCategory = Exclude<ShopCategory, 'auto'>;
+export const MIX_CATEGORIES: MixCategory[] = ['economic', 'aggressive', 'defensive'];
 
 /** What buying an item does. Costs live on the item, not the effect. */
 export type Effect =
@@ -19,7 +23,9 @@ export type Effect =
   | { k: 'insurance'; pct: number; sec: number } // refund part of clicks lost to attacks
   | { k: 'sabotage'; sec: number } // delay the other team's next shop
   | { k: 'rust'; pct: number; sec: number } // other team's auto clickers produce less
-  | { k: 'tax'; pct: number }; // other team's next purchase costs more, you collect
+  | { k: 'tax'; pct: number } // other team's next purchase costs more, you collect
+  | { k: 'slot' } // permanently adds one slot to your team's shop
+  | { k: 'odds'; cat: MixCategory }; // shifts your shop slots' rolls towards this category
 
 export interface ItemDef {
   id: string;
@@ -27,6 +33,7 @@ export interface ItemDef {
   rarity: Rarity;
   cost: number;
   eff: Effect;
+  category: ShopCategory;
   name: string;
   desc: string;
 }
@@ -34,6 +41,33 @@ export interface ItemDef {
 export const RARITY_WEIGHT: Record<Rarity, number> = { common: 100, uncommon: 45, rare: 15 };
 
 const fmt = (n: number) => n.toLocaleString('en-US');
+
+const CAT_LABEL: Record<MixCategory, string> = { economic: 'Economic', aggressive: 'Aggressive', defensive: 'Defensive' };
+
+export function categoryOf(e: Effect): ShopCategory {
+  switch (e.k) {
+    case 'auto':
+      return 'auto';
+    case 'odds':
+      return e.cat;
+    case 'remove':
+    case 'drain':
+    case 'deleteAuto':
+    case 'siege':
+    case 'siphon':
+    case 'sabotage':
+    case 'rust':
+    case 'tax':
+      return 'aggressive';
+    case 'shield':
+    case 'regen':
+    case 'decoy':
+    case 'insurance':
+      return 'defensive';
+    default:
+      return 'economic'; // boost, autoBoost, perClick, discount, invest, slot
+  }
+}
 
 function text(e: Effect, tier: number, cost: number): { name: string; desc: string } {
   switch (e.k) {
@@ -71,6 +105,10 @@ function text(e: Effect, tier: number, cost: number): { name: string; desc: stri
       return { name: `Sabotage ${e.sec}s`, desc: `The other team's next shop opening is delayed by ${e.sec} seconds.` };
     case 'rust':
       return { name: `Rust ${e.pct}% (${e.sec}s)`, desc: `For ${e.sec} seconds the other team's auto clickers produce ${e.pct}% less.` };
+    case 'slot':
+      return { name: 'Extra Shop Slot', desc: `Permanently adds one slot to your team's shop (a random item from any category).` };
+    case 'odds':
+      return { name: `${CAT_LABEL[e.cat]} Odds Up`, desc: `Your shop's other slots get a better chance of rolling ${e.cat} items, and your ${e.cat} slot is less likely to roll anything else. Stacks.` };
     case 'tax':
       return { name: `Sales Tax ${e.pct}%`, desc: `The other team's next purchase costs ${e.pct}% more, and your team collects the extra.` };
   }
@@ -109,6 +147,10 @@ const T1: Row[] = [
   ['c', 30, { k: 'siege', hp: 100 }],
   ['u', 90, { k: 'siege', hp: 300 }],
   ['c', 30, { k: 'tax', pct: 20 }],
+  ['r', 400, { k: 'slot' }],
+  ['u', 150, { k: 'odds', cat: 'economic' }],
+  ['u', 150, { k: 'odds', cat: 'aggressive' }],
+  ['u', 150, { k: 'odds', cat: 'defensive' }],
 ];
 
 const T2: Row[] = [
@@ -148,6 +190,10 @@ const T2: Row[] = [
   ['c', 600, { k: 'siege', hp: 2000 }],
   ['u', 2500, { k: 'siege', hp: 10000 }],
   ['c', 800, { k: 'tax', pct: 35 }],
+  ['r', 8000, { k: 'slot' }],
+  ['u', 3000, { k: 'odds', cat: 'economic' }],
+  ['u', 3000, { k: 'odds', cat: 'aggressive' }],
+  ['u', 3000, { k: 'odds', cat: 'defensive' }],
 ];
 
 const T3: Row[] = [
@@ -194,12 +240,16 @@ const T3: Row[] = [
   ['c', 30000, { k: 'siege', hp: 100000 }],
   ['u', 120000, { k: 'siege', hp: 500000 }],
   ['c', 25000, { k: 'tax', pct: 50 }],
+  ['r', 150000, { k: 'slot' }],
+  ['u', 60000, { k: 'odds', cat: 'economic' }],
+  ['u', 60000, { k: 'odds', cat: 'aggressive' }],
+  ['u', 60000, { k: 'odds', cat: 'defensive' }],
 ];
 
 export const CATALOG: ItemDef[] = [T1, T2, T3].flatMap((rows, ti) =>
   rows.map(([r, cost, eff], i): ItemDef => {
     const tier = (ti + 1) as 1 | 2 | 3;
-    return { id: `t${tier}-${i}`, tier, rarity: R[r], cost, eff, ...text(eff, tier, cost) };
+    return { id: `t${tier}-${i}`, tier, rarity: R[r], cost, eff, category: categoryOf(eff), ...text(eff, tier, cost) };
   }),
 );
 export const ITEMS = new Map(CATALOG.map((i) => [i.id, i]));
@@ -215,20 +265,93 @@ export function slotTiers(clicks: number): (1 | 2 | 3)[] {
   return [3, 3, 3];
 }
 
+/** The most extra slots a team can buy (so a shop is at most 4 + this long). */
+export const MAX_EXTRA_SLOTS = 4;
+/** How heavily a slot favours its own category. Every odds upgrade moves the other weights by 1 (see `bumpOdds`). */
+export const HOME_WEIGHT = 2;
+
+/** For each of the three slots (named by its home category), the weight of rolling each category. */
+export type SlotWeights = Record<MixCategory, Record<MixCategory, number>>;
+
+/** A fresh shop: every slot always rolls its own category. */
+export const baseWeights = (): SlotWeights => {
+  const w = {} as SlotWeights;
+  for (const h of MIX_CATEGORIES) {
+    w[h] = {} as Record<MixCategory, number>;
+    for (const c of MIX_CATEGORIES) w[h][c] = c === h ? HOME_WEIGHT : 0;
+  }
+  return w;
+};
+
 /**
- * Rolls a shop. Each slot picks a random item of its tier, weighted by rarity, no repeats.
- * Items the team can actually afford are preferred so a shop is rarely a wall of "too expensive";
- * if a slot has nothing affordable it falls back to the whole tier.
+ * Buying "Odds Up" for `cat`: the other two slots gain a chance to roll `cat`, and the `cat` slot loses one step of
+ * chance to roll anything else (down to always rolling `cat`). With HOME_WEIGHT 2, one upgrade makes another slot
+ * roll `cat` 1 time in 3.
  */
-export function rollShop(clicks: number, rng: () => number): ItemDef[] {
+export function bumpOdds(w: SlotWeights, cat: MixCategory): void {
+  for (const h of MIX_CATEGORIES) {
+    for (const c of MIX_CATEGORIES) {
+      if (c === h) continue;
+      if (h === cat) w[h][c] = Math.max(0, w[h][c] - 1);
+      else if (c === cat) w[h][c] += 1;
+    }
+  }
+}
+
+export interface ShopOpts {
+  /** Slots bought with "Extra Shop Slot". */
+  extraSlots: number;
+  /** What each slot rolls its category from. */
+  weights: SlotWeights;
+}
+export const NO_OPTS: ShopOpts = { extraSlots: 0, weights: baseWeights() };
+
+function weighted<T>(list: T[], weight: (t: T) => number, rng: () => number): T {
+  const total = list.reduce((s, x) => s + weight(x), 0);
+  let roll = rng() * total;
+  return list.find((x) => (roll -= weight(x)) < 0) ?? list[list.length - 1];
+}
+
+/**
+ * Rolls a shop, in this order:
+ *  1. An auto clicker: any tier, picked at random from the three best (by clicks/second) the team can afford.
+ *     If it can't afford any, the cheapest auto clicker is shown anyway. Never affected by the odds upgrades.
+ *  2. Economic, 3. aggressive, 4. defensive: each rolls its category using the team's `weights`.
+ *  5. One wildcard (any of the three categories, evenly) for each extra slot bought.
+ * Items come from the tiers the team's click total unlocks (`slotTiers`), weighted by rarity, preferring ones
+ * the team can afford, with no repeats.
+ */
+export function rollShop(clicks: number, rng: () => number, opts: ShopOpts = NO_OPTS): ItemDef[] {
   const out: ItemDef[] = [];
-  for (const tier of slotTiers(clicks)) {
-    const all = CATALOG.filter((i) => i.tier === tier && !out.includes(i));
+
+  const autos = CATALOG.filter((i) => i.category === 'auto');
+  const ownable = autos.filter((i) => i.cost <= clicks).sort((a, b) => rateOf(b) - rateOf(a)).slice(0, 3);
+  const cheapest = [...autos].sort((a, b) => a.cost - b.cost)[0];
+  out.push(ownable.length ? ownable[Math.floor(rng() * ownable.length)] : cheapest);
+
+  const tiers = new Set(slotTiers(clicks));
+  const pick = (cat: MixCategory): ItemDef | null => {
+    const all = CATALOG.filter(
+      (i) => i.category === cat && tiers.has(i.tier) && !out.includes(i) && !(i.eff.k === 'slot' && opts.extraSlots >= MAX_EXTRA_SLOTS),
+    );
     const affordable = all.filter((i) => i.cost <= clicks);
     const pool = affordable.length ? affordable : all;
-    const total = pool.reduce((s, i) => s + RARITY_WEIGHT[i.rarity], 0);
-    let roll = rng() * total;
-    out.push(pool.find((i) => (roll -= RARITY_WEIGHT[i.rarity]) < 0) ?? pool[pool.length - 1]);
+    return pool.length ? weighted(pool, (i) => RARITY_WEIGHT[i.rarity], rng) : null;
+  };
+  /** Rolls the category, falling back to the others if that one has nothing left to show. */
+  const slot = (first: MixCategory) => {
+    const order = [first, ...MIX_CATEGORIES.filter((c) => c !== first)];
+    for (const c of order) {
+      const it = pick(c);
+      if (it) return out.push(it);
+    }
+  };
+
+  for (const home of MIX_CATEGORIES) {
+    slot(weighted(MIX_CATEGORIES, (c) => opts.weights[home][c], rng));
   }
+  for (let i = 0; i < Math.min(opts.extraSlots, MAX_EXTRA_SLOTS); i++) slot(MIX_CATEGORIES[Math.floor(rng() * 3)]);
   return out;
 }
+
+const rateOf = (i: ItemDef) => (i.eff.k === 'auto' ? i.eff.rate : 0);
