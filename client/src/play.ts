@@ -342,6 +342,10 @@ function localTick() {
   if (count && s.countdownEndsAt) count.textContent = String(Math.max(0, Math.ceil((s.countdownEndsAt - serverTime()) / 1000)));
   const clock = $('[data-clock]');
   if (clock && s.endsAt) clock.textContent = mmss(s.endsAt - serverTime());
+  else if (clock && s.target) {
+    clock.textContent = `Goal ${num(s.target)}`;
+    clock.classList.add('goalmode');
+  }
   const hold = $('[data-hold]');
   const sh = s.you?.shop;
   if (hold && sh) {

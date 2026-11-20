@@ -62,7 +62,10 @@ const active = (list: Timed[], t: number) => list.filter((x) => x.from <= t && x
 const mult = (list: Timed[], t: number) => 1 + active(list, t).reduce((s, x) => s + (x.v - 1), 0);
 
 export interface EngineOpts {
-  durationMs: number;
+  /** Time mode: how long the game lasts. */
+  durationMs?: number | null;
+  /** Target mode: the first team to this many clicks wins. */
+  target?: number | null;
   rng?: () => number;
 }
 
@@ -70,7 +73,8 @@ export class Engine {
   readonly players = new Map<string, EPlayer>();
   readonly teams: Record<Side, ETeam>;
   readonly startedAt: number;
-  readonly endsAt: number;
+  readonly endsAt: number | null;
+  readonly target: number | null;
   finished = false;
   winner: Side | 'tie' | null = null;
   private last: number;
@@ -81,7 +85,8 @@ export class Engine {
   constructor(roster: { id: string; name: string; side: Side; connected: boolean }[], now: number, opts: EngineOpts) {
     this.rng = opts.rng ?? Math.random;
     this.startedAt = this.last = now;
-    this.endsAt = now + opts.durationMs;
+    this.endsAt = opts.durationMs != null ? now + opts.durationMs : null;
+    this.target = opts.target ?? null;
     const mk = (side: Side): ETeam => ({
       side,
       clicks: 0,
@@ -190,7 +195,7 @@ export class Engine {
   /** Call at (or after) `nextWake()`. Opens due shops in time order, and ends the game. */
   update(now: number) {
     if (this.finished) return;
-    const end = Math.min(now, this.endsAt);
+    const end = Math.min(now, this.endsAt ?? Infinity);
     for (;;) {
       let due: ETeam | null = null;
       for (const side of SIDES) {
@@ -202,18 +207,27 @@ export class Engine {
       this.offerNext(due, due.nextOfferAt!);
     }
     this.advance(end);
-    if (now >= this.endsAt) this.finish();
+    if ((this.endsAt !== null && now >= this.endsAt) || this.hitTarget()) this.finish();
   }
 
   /** When something time-based next needs to happen (a shop opening, or the end of the game). */
   nextWake(): number | null {
     if (this.finished) return null;
-    let w = this.endsAt;
+    let w = this.endsAt ?? Infinity;
     for (const side of SIDES) {
       const t = this.teams[side];
       if (!t.holder && t.nextOfferAt !== null) w = Math.min(w, t.nextOfferAt);
+      if (this.target !== null) {
+        // Auto clickers can carry a team over the line between refreshes: wake up when it's projected to.
+        const net = this.autoEffective(side, this.last) - this.rate(other(side), (p) => p.drain);
+        if (net > 0) w = Math.min(w, Math.max(this.last + 250, this.last + ((this.target - t.clicks) / net) * 1000));
+      }
     }
-    return w;
+    return Number.isFinite(w) ? w : null;
+  }
+
+  private hitTarget() {
+    return this.target !== null && SIDES.some((s) => this.teams[s].clicks >= this.target!);
   }
 
   private finish() {
@@ -227,7 +241,8 @@ export class Engine {
       t.offer = null;
       t.nextOfferAt = null;
     }
-    this.log(null, this.winner === 'tie' ? "Time's up: it's a tie!" : `Time's up: the ${this.winner} team wins!`);
+    const why = this.target !== null ? 'Target reached' : "Time's up";
+    this.log(null, this.winner === 'tie' ? `${why}: it's a tie!` : `${why}: the ${this.winner} team wins!`);
   }
 
   setConnected(id: string, connected: boolean, now: number) {
@@ -257,6 +272,11 @@ export class Engine {
     p.lastClickAt = now;
     p.clicksMade += n;
     team.clicks += n * (1 + team.bonus) * m;
+    if (this.hitTarget()) {
+      this.advance(now);
+      this.finish();
+      return;
+    }
     if (p.siphon > 0) {
       this.advance(now); // shields must be current before we steal through them
       const stolen = this.damage(other(p.side), n * p.siphon, now);

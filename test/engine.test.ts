@@ -281,4 +281,29 @@ test('the game ends and picks a winner by clicks', () => {
   assert.equal(e.nextWake(), null);
 });
 
+test('target mode: first to the target wins, by clicks or by auto clickers', () => {
+  const mkT = () => new Engine(roster, 0, { target: 100, rng: () => 0.5 });
+  const e = mkT();
+  assert.equal(e.endsAt, null);
+  e.clicks('a1', 20, 1 * S);
+  assert.ok(!e.finished);
+  e.teams.right.clicks = 99;
+  e.clicks('b1', 5, 2 * S);
+  assert.ok(e.finished);
+  assert.equal(e.winner, 'right');
+  // auto clickers: the engine asks to be woken near the crossing and finishes then
+  const a = mkT();
+  a.players.get('a1')!.autos.push({ tier: 1, rate: 10 });
+  const w = a.nextWake()!;
+  assert.ok(w >= 9 * S && w <= 10.5 * S, `projected crossing near 10s (${w})`);
+  a.update(w);
+  assert.ok(a.finished, 'finished at the wake-up');
+  assert.equal(a.winner, 'left');
+  // time mode never finishes early on clicks
+  const t = mk();
+  t.teams.left.clicks = 1e9;
+  t.update(10 * S);
+  assert.ok(!t.finished);
+});
+
 console.log(`${n} engine tests passed`);

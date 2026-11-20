@@ -10,6 +10,9 @@ export type Rarity = 'common' | 'uncommon' | 'rare';
 export const MAX_PLAYER_NAME_LENGTH = 14;
 export const DURATION_OPTIONS_MIN = [3, 5, 10, 15, 20];
 export const DEFAULT_DURATION_MIN = 10;
+export const TARGET_OPTIONS = [1000, 10000, 100000, 1000000, 10000000];
+export const DEFAULT_TARGET = 100000;
+export type WinMode = 'time' | 'target';
 
 export interface PlayerInfo {
   id: string;
@@ -90,6 +93,9 @@ export interface YouInfo {
 }
 
 export interface Settings {
+  /** 'time': most clicks when the clock runs out. 'target': first team to reach `targetClicks`. */
+  mode: WinMode;
+  targetClicks: number;
   durationMin: number;
   fallbackRefresh: boolean;
 }
@@ -104,6 +110,8 @@ export interface ClientState {
   countdownEndsAt: number | null;
   startedAt: number | null;
   endsAt: number | null;
+  /** Target mode: the click count that wins the game. */
+  target: number | null;
   board: Board | null;
   feed: FeedEntry[];
   result: { winner: Side | 'tie'; left: number; right: number } | null;

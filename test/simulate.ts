@@ -105,6 +105,21 @@ async function main() {
   host.emit('host:backToLobby');
   await sleep(100);
   assert.equal(hostState.phase, 'lobby');
+  // a target game: first team to 100 clicks
+  host.emit('host:settings', { mode: 'target', targetClicks: 1000 });
+  await sleep(50);
+  assert.equal(hostState.settings.mode, 'target');
+  host.emit('host:start');
+  for (let i = 0; i < 50 && hostState.phase !== 'play'; i++) await sleep(50);
+  assert.equal(hostState.target, 1000);
+  assert.equal(hostState.endsAt, null);
+  for (let i = 0; i < 60; i++) {
+    bots.Ann.s.emit('player:clicks', { n: 30 });
+    await sleep(50);
+  }
+  for (let i = 0; i < 40 && hostState.phase !== 'gameOver'; i++) await sleep(100);
+  assert.equal(hostState.phase, 'gameOver');
+  assert.equal(hostState.result!.winner, 'left');
   console.log('simulation passed');
 }
 

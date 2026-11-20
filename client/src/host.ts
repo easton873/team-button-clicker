@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 import './theme.css';
 import './host.css';
-import { DURATION_OPTIONS_MIN, SIDES, type ClientState, type Side, type TeamBoard } from '../../shared/types';
+import { DURATION_OPTIONS_MIN, SIDES, TARGET_OPTIONS, type ClientState, type Side, type TeamBoard } from '../../shared/types';
 import { $, briefcaseHTML, esc, gearHTML, mmss, num, rate, SIDE_COLOR, SIDE_LABEL, serverTime, socket, syncClock, tieHTML, tweenNumber } from './common';
 
 const STORE = 'gearsandties.host';
@@ -95,7 +95,9 @@ function lobbyView(s: ClientState): string {
       <div class="teams">${col('left')}${col('right')}</div>
       <div class="pending" data-pending></div>
       <div class="opts plate">
-        <label>Shift length <select id="dur">${DURATION_OPTIONS_MIN.map((m) => `<option value="${m}">${m} minutes</option>`).join('')}</select></label>
+        <label>How to win <select id="mode"><option value="time">Most clicks when time runs out</option><option value="target">First team to a target</option></select></label>
+        <label data-for="time">Shift length <select id="dur">${DURATION_OPTIONS_MIN.map((m) => `<option value="${m}">${m} minutes</option>`).join('')}</select></label>
+        <label data-for="target">Target <select id="target">${TARGET_OPTIONS.map((n) => `<option value="${n}">${num(n)} clicks</option>`).join('')}</select></label>
         <label class="chk"><input type="checkbox" id="fallback" /> Refresh the scoreboard every 5s <small>(otherwise only when the shop opens or something is bought)</small></label>
       </div>
       <button class="btn startbtn" id="start" disabled>Start game</button>
@@ -115,7 +117,11 @@ function lobbyLive(s: ClientState) {
   }
   const none = s.players.filter((p) => !p.side);
   $('[data-pending]')!.innerHTML = none.length ? `Still picking a team: ${none.map((p) => esc(p.name)).join(', ')}` : '';
+  ($('#mode') as HTMLSelectElement).value = s.settings.mode;
   ($('#dur') as HTMLSelectElement).value = String(s.settings.durationMin);
+  ($('#target') as HTMLSelectElement).value = String(s.settings.targetClicks);
+  $('[data-for="time"]')!.hidden = s.settings.mode !== 'time';
+  $('[data-for="target"]')!.hidden = s.settings.mode !== 'target';
   ($('#fallback') as HTMLInputElement).checked = s.settings.fallbackRefresh;
   const l = s.players.filter((p) => p.connected && p.side !== 'right').length;
   const r = s.players.filter((p) => p.connected && p.side !== 'left').length;
@@ -131,6 +137,7 @@ function teamPanel(side: Side): string {
   return `<div class="panel plate ${side}" data-side="${side}">
     <div class="ph">${tieHTML(SIDE_COLOR[side])}<h2>${sideName(side)}</h2></div>
     <div class="clicks"><span data-clicks>0</span></div><div class="lbl">CLICKS</div>
+    <div class="prog" data-prog hidden><i></i></div>
     <div class="shield"><div class="bar"><i data-sfill></i><b data-speak></b></div><div class="sh-txt">SHIELD <span data-shield>0</span> <small>/ <span data-peak>0</span> peak</small></div></div>
     <div class="stats">
       <div><b data-auto>0</b><small>auto /s</small></div><div><b data-regen>0</b><small>regen /s</small></div>
@@ -144,7 +151,7 @@ function teamPanel(side: Side): string {
 
 const playView = () => `<section class="arena">
   ${teamPanel('left')}
-  <div class="mid"><div class="gears">${gearHTML('', 16)}${gearHTML('rev', 10)}</div><div class="clock" data-clock>0:00</div><div class="vs display">vs</div></div>
+  <div class="mid"><div class="gears">${gearHTML('', 16)}${gearHTML('rev', 10)}</div><div class="clock" data-clock>0:00</div><div class="goal" data-goal hidden>First to<b></b></div><div class="vs display">vs</div></div>
   ${teamPanel('right')}
   <div class="feed plate" data-feed></div>
 </section>`;
@@ -156,6 +163,9 @@ function playLive(s: ClientState) {
     const t: TeamBoard = b[side];
     const el = $(`.panel[data-side="${side}"]`)!;
     tweenNumber($('[data-clicks]', el)!, t.clicks, 1200);
+    const prog = $('[data-prog]', el)!;
+    prog.hidden = !s.target;
+    if (s.target) ($('i', prog) as HTMLElement).style.width = `${Math.min(100, (t.clicks / s.target) * 100)}%`;
     tweenNumber($('[data-shield]', el)!, t.shield, 900);
     $('[data-peak]', el)!.textContent = num(t.shieldPeak);
     ($('[data-sfill]', el) as HTMLElement).style.width = t.shieldPeak ? `${Math.min(100, (t.shield / t.shieldPeak) * 100)}%` : '0%';
@@ -192,7 +202,7 @@ function overView(s: ClientState): string {
   const title = w === 'tie' ? "It's a tie!" : `${sideName(w)} wins!`;
   const color = w === 'tie' ? 'var(--brass)' : SIDE_COLOR[w];
   return `<section class="center over">
-    <div class="eyebrow">Shift over</div>
+    <div class="eyebrow">${s.target ? 'Target reached' : 'Shift over'}</div>
     <h1 class="display" style="color:${color}">${title}</h1>
     <div class="final">
       <div class="plate left ${w === 'left' ? 'win' : ''}"><small>LEFT TEAM</small><b>${num(r?.left ?? 0)}</b></div>
@@ -227,6 +237,12 @@ function localTick() {
   if (!s) return;
   const count = $('[data-count]');
   if (count && s.countdownEndsAt) count.textContent = String(Math.max(0, Math.ceil((s.countdownEndsAt - serverTime()) / 1000)));
+  const goal = $('[data-goal]');
+  if (goal && s.target) {
+    goal.hidden = false;
+    $('b', goal)!.textContent = num(s.target);
+    $('[data-clock]')!.hidden = true;
+  }
   const clock = $('[data-clock]');
   if (clock && s.endsAt) {
     const left = s.endsAt - serverTime();
@@ -252,6 +268,8 @@ document.addEventListener('click', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target as HTMLInputElement;
+  if (t.id === 'mode') socket.emit('host:settings', { mode: t.value as 'time' | 'target' });
+  if (t.id === 'target') socket.emit('host:settings', { targetClicks: Number(t.value) });
   if (t.id === 'dur') socket.emit('host:settings', { durationMin: Number(t.value) });
   if (t.id === 'fallback') socket.emit('host:settings', { fallbackRefresh: t.checked });
 });

@@ -107,3 +107,5 @@ input { -webkit-user-select: text; user-select: text; }
 .buy small { font-family: var(--font-body); font-size: 11px; text-transform: none; letter-spacing: 0; }
 .buy span { font-size: 12px; letter-spacing: 2px; }
 .finalrow { display: flex; gap: 12px; width: 100%; } .finalrow .sc { flex: 1; } .finalrow b { font-size: 34px; }
+
+.hdr .clock.goalmode { font-size: 20px; text-align: right; }

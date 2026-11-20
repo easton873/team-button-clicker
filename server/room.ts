@@ -1,6 +1,8 @@
 import type { Server } from 'socket.io';
 import {
   DEFAULT_DURATION_MIN,
+  DEFAULT_TARGET,
+  TARGET_OPTIONS,
   DURATION_OPTIONS_MIN,
   MAX_PLAYER_NAME_LENGTH,
   type ClientState,
@@ -31,7 +33,7 @@ export class Room {
   hostSocketId: string | null = null;
   players = new Map<string, Player>();
   phase: Phase = 'lobby';
-  settings: Settings = { durationMin: DEFAULT_DURATION_MIN, fallbackRefresh: CONFIG.fallbackDefaultOn && CONFIG.fallbackUpdateMs > 0 };
+  settings: Settings = { mode: 'time', targetClicks: DEFAULT_TARGET, durationMin: DEFAULT_DURATION_MIN, fallbackRefresh: CONFIG.fallbackDefaultOn && CONFIG.fallbackUpdateMs > 0 };
 
   private engine: Engine | null = null;
   private countdownEndsAt: number | null = null;
@@ -140,6 +142,8 @@ export class Room {
 
   updateSettings(patch: Partial<Settings>) {
     if (this.phase !== 'lobby') return;
+    if (patch.mode === 'time' || patch.mode === 'target') this.settings.mode = patch.mode;
+    if (typeof patch.targetClicks === 'number' && TARGET_OPTIONS.includes(patch.targetClicks)) this.settings.targetClicks = patch.targetClicks;
     if (typeof patch.durationMin === 'number' && DURATION_OPTIONS_MIN.includes(patch.durationMin)) this.settings.durationMin = patch.durationMin;
     if (typeof patch.fallbackRefresh === 'boolean') this.settings.fallbackRefresh = patch.fallbackRefresh;
     this.broadcast();
@@ -171,7 +175,7 @@ export class Room {
     this.engine = new Engine(
       [...this.players.values()].map((p) => ({ id: p.id, name: p.name, side: p.side!, connected: !!p.socketId })),
       now,
-      { durationMs: this.settings.durationMin * 60000 * SCALE },
+      this.settings.mode === 'target' ? { target: this.settings.targetClicks } : { durationMs: this.settings.durationMin * 60000 * SCALE },
     );
     this.phase = 'play';
     this.countdownEndsAt = null;
@@ -191,6 +195,7 @@ export class Room {
   clicks(playerId: string, n: unknown) {
     if (this.phase !== 'play' || !this.engine) return;
     this.engine.clicks(playerId, Number(n), Date.now());
+    if (this.engine.finished) this.broadcast(); // that click crossed the target
     // No broadcast on purpose: the totals reach the screens when something computes them.
   }
 
@@ -267,6 +272,7 @@ export class Room {
       countdownEndsAt: this.countdownEndsAt,
       startedAt: this.engine?.startedAt ?? null,
       endsAt: this.engine?.endsAt ?? null,
+      target: this.engine?.target ?? null,
       board: this.engine ? this.engine.board(now) : null,
       feed: this.engine?.feed ?? [],
       result: this.engine?.finished
