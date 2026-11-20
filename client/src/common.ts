@@ -1,5 +1,5 @@
 import { io, type Socket } from 'socket.io-client';
-import type { ClientToServerEvents, ServerToClientEvents, Side } from '../../shared/types';
+import type { ClientToServerEvents, ServerToClientEvents, Side, TeamBoard } from '../../shared/types';
 
 export const GAME_NAME = 'Gears & Ties';
 export const SIDE_LABEL: Record<Side, string> = { left: 'Left Team', right: 'Right Team' };
@@ -57,23 +57,14 @@ export function tieHTML(color: string, cls = ''): string {
 export const briefcaseHTML = (cls = '') =>
   `<svg class="case ${cls}" viewBox="0 0 40 32" aria-hidden="true"><path d="M14 8V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3" fill="none" stroke="currentColor" stroke-width="3"/><rect x="2" y="8" width="36" height="21" rx="3" fill="currentColor"/><path d="M2 17h36" stroke="#14171c" stroke-width="2"/><rect x="17" y="15" width="6" height="5" rx="1" fill="#14171c"/></svg>`;
 
-/** Smoothly counts an element's number to a new value. */
-const tweens = new WeakMap<HTMLElement, number>();
-export function tweenNumber(el: HTMLElement, to: number, ms = 900) {
-  const from = Number(el.dataset.v ?? to);
-  el.dataset.v = String(to);
-  const prev = tweens.get(el);
-  if (prev) cancelAnimationFrame(prev);
-  if (from === to) {
-    el.textContent = num(to);
-    return;
-  }
-  const t0 = performance.now();
-  const step = (t: number) => {
-    const k = Math.min(1, (t - t0) / ms);
-    const e = 1 - Math.pow(1 - k, 3);
-    el.textContent = num(from + (to - from) * e);
-    if (k < 1) tweens.set(el, requestAnimationFrame(step));
-  };
-  tweens.set(el, requestAnimationFrame(step));
+/**
+ * What to show for a team right now: the last real numbers drifted forward by the server's trend. Nothing is
+ * remembered or smoothed: the next real update just replaces it.
+ */
+export function project(t: TeamBoard, boardAt: number, target: number | null) {
+  const dt = Math.max(0, serverTime() - boardAt) / 1000;
+  let clicks = Math.max(0, t.clicks + t.clicksPerSec * dt);
+  if (target) clicks = Math.min(clicks, target);
+  const shield = Math.min(t.shieldPeak, Math.max(0, t.shield + t.shieldPerSec * dt));
+  return { clicks: Math.floor(clicks), shield: Math.floor(shield) };
 }

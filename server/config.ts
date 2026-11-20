@@ -10,16 +10,17 @@ export const CONFIG = {
   /** Nobody has any clicks at the very start, so the first shop waits a little. */
   firstShopDelayMs: 10000 * SCALE,
 
-  /** The main screen refreshes on this beat for the first `earlyWindowMs` of a game... */
-  earlyUpdateMs: 5000 * SCALE,
-  earlyWindowMs: 30000 * SCALE,
   /**
-   * ...and after that it only refreshes when something computes the numbers (a shop opening, a purchase,
-   * an attack) -- plus this optional fallback beat so it never sits stale for long.
-   * Set FALLBACK_UPDATE_MS=0 (or turn it off in the lobby) to rely purely on shop/purchase refreshes.
+   * Clicks are harvested from the phones once a second for the first `earlyWindowMs` of a game. After that they are
+   * only harvested when the totals are needed anyway (a shop opening, a purchase, an attack, the end).
    */
-  fallbackUpdateMs: Number(process.env.FALLBACK_UPDATE_MS ?? 5000) * SCALE,
-  fallbackDefaultOn: process.env.FALLBACK_UPDATE !== 'off',
+  earlyUpdateMs: 1000 * SCALE,
+  earlyWindowMs: 10000 * SCALE,
+  /**
+   * Between harvests the screens project the totals forward from the most recent clicking rate. The manual click
+   * rate is multiplied by this so a slowdown doesn't make the number visibly drop at the next real update.
+   */
+  projectionFactor: 0.8,
 
   /**
    * Phones never send clicks on their own. The server *asks* every phone for its running click count only
@@ -28,7 +29,7 @@ export const CONFIG = {
    */
   collectTimeoutMs: 1500,
   /** Back-to-back requests (a purchase right after a shop opens) reuse a collection this recent. */
-  collectMinGapMs: 400,
+  collectMinGapMs: 400 * SCALE,
   /** Anti-cheat: more presses per second than this in a batch are ignored. */
   maxClicksPerSecond: Number(process.env.MAX_CLICKS_PER_SECOND ?? 25),
 

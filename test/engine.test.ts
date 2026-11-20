@@ -306,4 +306,33 @@ test('target mode is only noticed when the totals are worked out, never by click
   assert.ok(!t.finished, 'time mode never ends early on clicks');
 });
 
+test('the projection uses only the most recent clicking rate, shrunk by the margin', () => {
+  const e = mk();
+  e.clicks('a1', 100, 10 * S);
+  e.rollRate(10 * S); // 100 clicks in 10s = 10/s
+  assert.equal(Math.round(e.teams.left.manualRate), 10);
+  let b = e.board(10 * S).left;
+  assert.ok(Math.abs(b.clicksPerSec - 10 * CONFIG.projectionFactor) < 1e-9, 'margin applied');
+  e.clicks('a1', 20, 12 * S);
+  e.rollRate(12 * S); // slowed to 10/s over 2s... then 5/s: only the latest interval counts
+  e.clicks('a1', 10, 14 * S);
+  e.rollRate(14 * S);
+  assert.equal(Math.round(e.teams.left.manualRate), 5, 'no memory of earlier rates');
+  // a harvest right after another is ignored rather than producing a wild rate
+  e.clicks('a1', 50, 14.1 * S);
+  e.rollRate(14.1 * S);
+  assert.equal(Math.round(e.teams.left.manualRate), 5);
+  // known rates are exact, and a shield soaks drain before clicks
+  const f = mk();
+  f.players.get('a1')!.autos.push({ tier: 1, rate: 3 });
+  f.players.get('b1')!.drain = 2;
+  f.teams.left.shield = f.teams.left.peak = 100;
+  b = f.board(0).left;
+  assert.equal(b.clicksPerSec, 3);
+  assert.equal(b.shieldPerSec, -2);
+  f.teams.left.shield = 0;
+  b = f.board(0).left;
+  assert.equal(b.clicksPerSec, 1, 'drain now hits the clicks');
+});
+
 console.log(`${n} engine tests passed`);

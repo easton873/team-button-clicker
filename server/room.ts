@@ -35,7 +35,7 @@ export class Room {
   hostSocketId: string | null = null;
   players = new Map<string, Player>();
   phase: Phase = 'lobby';
-  settings: Settings = { mode: 'time', targetClicks: DEFAULT_TARGET, durationMin: DEFAULT_DURATION_MIN, fallbackRefresh: CONFIG.fallbackDefaultOn && CONFIG.fallbackUpdateMs > 0 };
+  settings: Settings = { mode: 'time', targetClicks: DEFAULT_TARGET, durationMin: DEFAULT_DURATION_MIN };
 
   private engine: Engine | null = null;
   private countdownEndsAt: number | null = null;
@@ -150,7 +150,6 @@ export class Room {
     if (patch.mode === 'time' || patch.mode === 'target') this.settings.mode = patch.mode;
     if (typeof patch.targetClicks === 'number' && TARGET_OPTIONS.includes(patch.targetClicks)) this.settings.targetClicks = patch.targetClicks;
     if (typeof patch.durationMin === 'number' && DURATION_OPTIONS_MIN.includes(patch.durationMin)) this.settings.durationMin = patch.durationMin;
-    if (typeof patch.fallbackRefresh === 'boolean') this.settings.fallbackRefresh = patch.fallbackRefresh;
     this.broadcast();
   }
 
@@ -228,6 +227,11 @@ export class Room {
   private async collect() {
     if (!this.engine || Date.now() - this.lastCollectAt < CONFIG.collectMinGapMs) return;
     this.lastCollectAt = Date.now();
+    await this.askPhones();
+    this.engine?.rollRate(Date.now());
+  }
+
+  private async askPhones() {
     await Promise.all(
       [...this.players.values()].map(async (p) => {
         const sock = p.socketId ? this.io.sockets.sockets.get(p.socketId) : undefined;
@@ -280,12 +284,12 @@ export class Room {
     }, Math.max(0, w - Date.now()) + 5);
   }
 
-  /** The scoreboard beat: every few seconds early on, then only the optional fallback. */
+  /** The early harvest beat: once a second for the first few seconds of a game, then nothing. */
   private armTick() {
     if (this.tickTimer || !this.engine) return;
     const elapsed = Date.now() - this.engine.startedAt;
-    const every = elapsed < CONFIG.earlyWindowMs ? CONFIG.earlyUpdateMs : this.settings.fallbackRefresh ? CONFIG.fallbackUpdateMs : 0;
-    if (every <= 0) return;
+    if (elapsed >= CONFIG.earlyWindowMs) return;
+    const every = CONFIG.earlyUpdateMs;
     this.tickTimer = setTimeout(() => {
       this.tickTimer = null;
       this.refresh();

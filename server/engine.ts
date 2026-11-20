@@ -50,6 +50,9 @@ interface ETeam {
   holderTimerEnd: number;
   nextOfferAt: number | null;
   pendingDelay: number;
+  /** Clicks made by hand since the last rate was worked out, and the rate that gave (the most recent one only). */
+  manualAcc: number;
+  manualRate: number;
   offer: { ids: string[]; budget: number } | null;
 }
 
@@ -78,13 +81,14 @@ export class Engine {
   finished = false;
   winner: Side | 'tie' | null = null;
   private last: number;
+  private lastRateAt: number;
   private rng: () => number;
   feed: FeedEntry[] = [];
   private feedSeq = 0;
 
   constructor(roster: { id: string; name: string; side: Side; connected: boolean }[], now: number, opts: EngineOpts) {
     this.rng = opts.rng ?? Math.random;
-    this.startedAt = this.last = now;
+    this.startedAt = this.last = this.lastRateAt = now;
     this.endsAt = opts.durationMs != null ? now + opts.durationMs : null;
     this.target = opts.target ?? null;
     const mk = (side: Side): ETeam => ({
@@ -107,6 +111,8 @@ export class Engine {
       holderTimerEnd: 0,
       nextOfferAt: now + CONFIG.firstShopDelayMs,
       pendingDelay: 0,
+      manualAcc: 0,
+      manualRate: 0,
       offer: null,
     });
     this.teams = { left: mk('left'), right: mk('right') };
@@ -268,11 +274,27 @@ export class Engine {
     p.lastClickAt = now;
     p.clicksMade += n;
     team.clicks += n * (1 + team.bonus) * m;
+    team.manualAcc += n * (1 + team.bonus) * m;
     if (p.siphon > 0) {
       this.advance(now); // shields must be current before we steal through them
       const stolen = this.damage(other(p.side), n * p.siphon, now);
       team.clicks += stolen;
     }
+  }
+
+  /**
+   * Called right after clicks were collected from the phones: the manual clicking rate is simply what was gained
+   * since the previous collection, divided by the time between them. No history is kept.
+   */
+  rollRate(now: number) {
+    const dt = (now - this.lastRateAt) / 1000;
+    if (dt < 0.25) return; // too close together to mean anything: keep the last rate
+    for (const side of SIDES) {
+      const t = this.teams[side];
+      t.manualRate = t.manualAcc / dt;
+      t.manualAcc = 0;
+    }
+    this.lastRateAt = now;
   }
 
   // ------------------------------------------------------------------ the shop
@@ -470,12 +492,24 @@ export class Engine {
       auto: this.autoEffective(side, at),
       regen: this.rate(side, (p) => p.regen),
       drain: this.rate(side, (p) => p.drain),
+      ...this.trend(side, at),
       perClick: this.clickValue(side, at),
       effects,
       holderId: t.holder,
       holderEndsAt: t.holder ? t.holderTimerEnd : null,
       nextOfferAt: t.nextOfferAt,
     };
+  }
+
+  /** Where the screens should drift between real updates (see TeamBoard.clicksPerSec). */
+  private trend(side: Side, at: number): { clicksPerSec: number; shieldPerSec: number } {
+    const t = this.teams[side];
+    const regen = this.rate(side, (p) => p.regen);
+    const drainIn = this.rate(other(side), (p) => p.drain);
+    const income = this.autoEffective(side, at) + t.manualRate * CONFIG.projectionFactor;
+    // A shield soaks the drain first; with none left, whatever regen doesn't cover bites into the clicks.
+    if (t.shield > 0) return { clicksPerSec: income, shieldPerSec: regen - drainIn };
+    return { clicksPerSec: income - Math.max(0, drainIn - regen), shieldPerSec: 0 };
   }
 
   board(now: number): Board {

@@ -36,6 +36,13 @@ export interface TeamBoard {
   auto: number;
   regen: number;
   drain: number;
+  /**
+   * How the screens project the totals forward until the next real update (per second). Already includes the
+   * projection margin on the manual click rate. The shield and clicks are clamped, not modelled, so a real update
+   * simply jumps to the right numbers.
+   */
+  clicksPerSec: number;
+  shieldPerSec: number;
   /** What one click is worth right now (permanent bonuses and boosts included). */
   perClick: number;
   effects: EffectBadge[];
@@ -97,7 +104,6 @@ export interface Settings {
   mode: WinMode;
   targetClicks: number;
   durationMin: number;
-  fallbackRefresh: boolean;
 }
 
 export interface ClientState {

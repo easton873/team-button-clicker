@@ -1,7 +1,7 @@
 import './theme.css';
 import './play.css';
 import { MAX_PLAYER_NAME_LENGTH, type ClientState, type ShopItemView, type Side } from '../../shared/types';
-import { $, briefcaseHTML, esc, gearHTML, mmss, num, rate, serverTime, SIDE_LABEL, SIDE_COLOR, socket, syncClock, tieHTML } from './common';
+import { $, briefcaseHTML, esc, gearHTML, mmss, num, project, rate, serverTime, SIDE_LABEL, SIDE_COLOR, socket, syncClock, tieHTML } from './common';
 
 const app = $('#app')!;
 const STORE = 'gearsandties.player';
@@ -198,8 +198,6 @@ function playLive(s: ClientState) {
   const side = you?.side;
   if (!you || !side || !s.board) return;
   const b = s.board;
-  $('[data-mine]')!.textContent = num(b[side].clicks);
-  $('[data-foe]')!.textContent = num(b[side === 'left' ? 'right' : 'left'].clicks);
   $('[data-cv]')!.textContent = `+${rate(you.clickValue)}`;
   $('[data-perks]')!.innerHTML = you.perks.map((p) => `<span class="perk">${esc(p)}</span>`).join('');
   renderShop(s);
@@ -316,6 +314,11 @@ function render() {
 function localTick() {
   const s = state;
   if (!s) return;
+  const side = s.you?.side;
+  if (s.board && side && s.phase === 'play' && $('[data-mine]')) {
+    $('[data-mine]')!.textContent = num(project(s.board[side], s.board.at, s.target).clicks);
+    $('[data-foe]')!.textContent = num(project(s.board[side === 'left' ? 'right' : 'left'], s.board.at, s.target).clicks);
+  }
   const count = $('[data-count]');
   if (count && s.countdownEndsAt) count.textContent = String(Math.max(0, Math.ceil((s.countdownEndsAt - serverTime()) / 1000)));
   const clock = $('[data-clock]');

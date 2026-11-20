@@ -124,6 +124,8 @@ async function main() {
   bots.Cy.total = 0;
   for (let i = 0; i < 60; i++) {
     bots.Ann.total += 30;
+    // like a player: they use the shop and leave it, which is what makes the server work the totals out
+    for (const b of Object.values(bots)) if (b.st?.you?.shop) await emit(b.s, 'player:closeShop');
     await sleep(50);
   }
   for (let i = 0; i < 60 && hostState.phase !== 'gameOver'; i++) await sleep(100);

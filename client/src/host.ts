@@ -2,7 +2,7 @@ import QRCode from 'qrcode';
 import './theme.css';
 import './host.css';
 import { DURATION_OPTIONS_MIN, SIDES, TARGET_OPTIONS, type ClientState, type Side, type TeamBoard } from '../../shared/types';
-import { $, briefcaseHTML, esc, gearHTML, mmss, num, rate, SIDE_COLOR, SIDE_LABEL, serverTime, socket, syncClock, tieHTML, tweenNumber } from './common';
+import { $, briefcaseHTML, esc, gearHTML, mmss, num, rate, SIDE_COLOR, SIDE_LABEL, serverTime, socket, syncClock, tieHTML, project } from './common';
 
 const STORE = 'gearsandties.host';
 const stage = $('#stage')!;
@@ -98,7 +98,6 @@ function lobbyView(s: ClientState): string {
         <label>How to win <select id="mode"><option value="time">Most clicks when time runs out</option><option value="target">First team to a target</option></select></label>
         <label data-for="time">Shift length <select id="dur">${DURATION_OPTIONS_MIN.map((m) => `<option value="${m}">${m} minutes</option>`).join('')}</select></label>
         <label data-for="target">Target <select id="target">${TARGET_OPTIONS.map((n) => `<option value="${n}">${num(n)} clicks</option>`).join('')}</select></label>
-        <label class="chk"><input type="checkbox" id="fallback" /> Refresh the scoreboard every 5s <small>(otherwise only when the shop opens or something is bought)</small></label>
       </div>
       <button class="btn startbtn" id="start" disabled>Start game</button>
     </div>
@@ -122,7 +121,6 @@ function lobbyLive(s: ClientState) {
   ($('#target') as HTMLSelectElement).value = String(s.settings.targetClicks);
   $('[data-for="time"]')!.hidden = s.settings.mode !== 'time';
   $('[data-for="target"]')!.hidden = s.settings.mode !== 'target';
-  ($('#fallback') as HTMLInputElement).checked = s.settings.fallbackRefresh;
   const l = s.players.filter((p) => p.connected && p.side !== 'right').length;
   const r = s.players.filter((p) => p.connected && p.side !== 'left').length;
   const ok = s.players.filter((p) => p.connected).length >= 2 && l > 0 && r > 0;
@@ -162,13 +160,8 @@ function playLive(s: ClientState) {
   for (const side of SIDES) {
     const t: TeamBoard = b[side];
     const el = $(`.panel[data-side="${side}"]`)!;
-    tweenNumber($('[data-clicks]', el)!, t.clicks, 1200);
-    const prog = $('[data-prog]', el)!;
-    prog.hidden = !s.target;
-    if (s.target) ($('i', prog) as HTMLElement).style.width = `${Math.min(100, (t.clicks / s.target) * 100)}%`;
-    tweenNumber($('[data-shield]', el)!, t.shield, 900);
+    $('[data-prog]', el)!.hidden = !s.target;
     $('[data-peak]', el)!.textContent = num(t.shieldPeak);
-    ($('[data-sfill]', el) as HTMLElement).style.width = t.shieldPeak ? `${Math.min(100, (t.shield / t.shieldPeak) * 100)}%` : '0%';
     $('[data-auto]', el)!.textContent = rate(t.auto);
     $('[data-regen]', el)!.textContent = rate(t.regen);
     $('[data-drain]', el)!.textContent = rate(t.drain);
@@ -231,10 +224,22 @@ function render() {
   localTick();
 }
 
-/** Things that count down on their own between server updates (no network involved). */
+/** Things that count down or drift on their own between server updates (no network involved). */
 function localTick() {
   const s = state;
   if (!s) return;
+  if (s.board && s.phase === 'play') {
+    for (const side of SIDES) {
+      const t = s.board[side];
+      const el = $(`.panel[data-side="${side}"]`);
+      if (!el) continue;
+      const p = project(t, s.board.at, s.target);
+      $('[data-clicks]', el)!.textContent = num(p.clicks);
+      $('[data-shield]', el)!.textContent = num(p.shield);
+      ($('[data-sfill]', el) as HTMLElement).style.width = t.shieldPeak ? `${Math.min(100, (p.shield / t.shieldPeak) * 100)}%` : '0%';
+      if (s.target) ($('[data-prog] i', el) as HTMLElement).style.width = `${Math.min(100, (p.clicks / s.target) * 100)}%`;
+    }
+  }
   const count = $('[data-count]');
   if (count && s.countdownEndsAt) count.textContent = String(Math.max(0, Math.ceil((s.countdownEndsAt - serverTime()) / 1000)));
   const goal = $('[data-goal]');
@@ -257,7 +262,7 @@ function localTick() {
     el.textContent = `${Math.max(0, Math.ceil((Number(el.dataset.opens) - serverTime()) / 1000))}s`;
   });
 }
-setInterval(localTick, 250);
+setInterval(localTick, 100);
 
 document.addEventListener('click', (e) => {
   const t = e.target as HTMLElement;
@@ -271,5 +276,4 @@ document.addEventListener('change', (e) => {
   if (t.id === 'mode') socket.emit('host:settings', { mode: t.value as 'time' | 'target' });
   if (t.id === 'target') socket.emit('host:settings', { targetClicks: Number(t.value) });
   if (t.id === 'dur') socket.emit('host:settings', { durationMin: Number(t.value) });
-  if (t.id === 'fallback') socket.emit('host:settings', { fallbackRefresh: t.checked });
 });
