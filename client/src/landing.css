@@ -1,0 +1,11 @@
+.landing { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; text-align: center; position: relative; overflow: hidden; }
+.landing .bg-gear { position: absolute; color: rgba(201, 162, 75, 0.09); pointer-events: none; }
+.titleblock { display: flex; align-items: center; gap: 18px; position: relative; }
+.titleblock .tie { font-size: clamp(34px, 9vw, 58px); }
+.titleblock h1 { font-size: clamp(54px, 15vw, 110px); line-height: 0.95; background: linear-gradient(180deg, var(--brass-hi), var(--brass) 60%, var(--brass-lo)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.5)); }
+.tag { color: var(--dim); font-size: 19px; max-width: 32ch; line-height: 1.4; position: relative; }
+.landing .btn { width: min(420px, 100%); font-size: 26px; position: relative; flex-direction: column; gap: 0; padding: 0.5em 1em; }
+.landing .btn small { font-family: var(--font-body); font-size: 14px; letter-spacing: 0; text-transform: none; opacity: 0.7; font-weight: 400; }
+.join { display: flex; flex-direction: column; gap: 14px; align-items: center; width: 100%; position: relative; }
+.join input { width: min(420px, 100%); padding: 12px; background: #0f1216; border: 2px solid var(--steel-hi); border-radius: 8px; color: var(--brass-hi); font-family: var(--font-display); font-size: 34px; text-align: center; letter-spacing: 10px; outline: none; text-transform: uppercase; }
+.join input:focus { border-color: var(--brass); }

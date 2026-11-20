@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Gears &amp; Ties</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <main class="landing">
+    <div class="titleblock"><span id="t1"></span><h1 class="display">Gears<br />&amp; Ties</h1><span id="t2"></span></div>
+    <p class="tag">Two teams. One button each. Click like the quarterly report depends on it.</p>
+    <a class="btn" href="/host.html">Host a game <small>on the big screen</small></a>
+    <form id="join" class="join">
+      <input id="code" maxlength="4" placeholder="ROOM CODE" autocapitalize="characters" autocomplete="off" />
+      <button class="btn steel" type="submit">Join a game</button>
+    </form>
+  </main>
+  <script type="module">
+    import './src/theme.css';
+    import './src/landing.css';
+    import { gearHTML, tieHTML } from './src/common.ts';
+    document.getElementById('t1').outerHTML = tieHTML('#d7352f');
+    document.getElementById('t2').outerHTML = tieHTML('#2f6fd6');
+    document.querySelector('.landing').insertAdjacentHTML('afterbegin',
+      gearHTML('bg-gear slow', 14).replace('<svg', '<svg style="width:420px;left:-120px;top:-100px"') +
+      gearHTML('bg-gear slow rev', 10).replace('<svg', '<svg style="width:340px;right:-90px;bottom:-60px"') +
+      gearHTML('bg-gear', 8).replace('<svg', '<svg style="width:180px;right:8%;top:6%"'));
+    document.getElementById('join').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const code = document.getElementById('code').value.trim().toUpperCase();
+      location.href = '/play.html' + (code ? '?room=' + encodeURIComponent(code) : '');
+    });
+  </script>
+</body>
+</html>
