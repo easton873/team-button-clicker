@@ -114,7 +114,7 @@ io.on('connection', (socket) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n  Gears & Ties server listening on http://localhost:${PORT}`);
+  console.log(`\n  Team Button Clicker server listening on http://localhost:${PORT}`);
   for (const list of Object.values(os.networkInterfaces())) {
     for (const i of list ?? []) if (i.family === 'IPv4' && !i.internal) console.log(`  On your network:  http://${i.address}:${PORT}`);
   }

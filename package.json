@@ -2,7 +2,7 @@
   "name": "team-button-clicker",
   "version": "0.1.0",
   "private": true,
-  "description": "Gears & Ties: a two-team, roguelike button-clicking war. Big screen + phones.",
+  "description": "Team Button Clicker: a two-team, roguelike button-clicking war. Big screen + phones.",
   "type": "module",
   "engines": { "node": ">=18" },
   "scripts": {

@@ -1,7 +1,7 @@
 import { io, type Socket } from 'socket.io-client';
 import type { ClientToServerEvents, ServerToClientEvents, Side, TeamBoard } from '../../shared/types';
 
-export const GAME_NAME = 'Gears & Ties';
+export const GAME_NAME = 'Team Button Clicker';
 export const SIDE_LABEL: Record<Side, string> = { left: 'Left Team', right: 'Right Team' };
 export const SIDE_COLOR: Record<Side, string> = { left: '#d7352f', right: '#2f6fd6' };
 

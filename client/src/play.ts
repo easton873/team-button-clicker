@@ -4,7 +4,7 @@ import { MAX_PLAYER_NAME_LENGTH, type ClientState, type ShopItemView, type Side 
 import { $, briefcaseHTML, esc, gearHTML, mmss, num, project, rate, serverTime, SIDE_LABEL, SIDE_COLOR, socket, syncClock, tieHTML } from './common';
 
 const app = $('#app')!;
-const STORE = 'gearsandties.player';
+const STORE = 'teambuttonclicker.player';
 
 let state: ClientState | null = null;
 let me: { code: string; token: string; name: string; id: string } | null = null;
@@ -107,13 +107,13 @@ const sideBanner = (side: Side | null) =>
 function joinView(): string {
   const want = (params.get('room') || '').toUpperCase();
   return `<main class="pad center">
-    <div class="titleblock">${gearHTML('', 12)}<h1 class="display">Gears<br>&amp; Ties</h1></div>
+    <div class="titleblock">${gearHTML('', 12)}<h1 class="display">Team Button Clicker</h1></div>
     ${closedMsg ? `<div class="error">${esc(closedMsg)}</div>` : ''}
     <form id="joinForm" class="form">
       <label>Room code<input id="code" maxlength="4" value="${esc(want)}" autocapitalize="characters" autocomplete="off" /></label>
       <label>Your name<input id="pname" maxlength="${MAX_PLAYER_NAME_LENGTH}" value="${esc(draftName)}" autocomplete="off" /></label>
       <div class="error" id="joinErr">${esc(joinError)}</div>
-      <button class="btn big" type="submit">Clock in</button>
+      <button class="btn big" type="submit">Join Game</button>
     </form>
   </main>`;
 }
@@ -143,7 +143,7 @@ function lobbyLive(s: ClientState) {
   $('[data-waitmsg]')!.textContent = mine ? "Waiting for the host to start…" : 'Tap a team to join it.';
 }
 
-const countdownView = () => `<main class="pad center"><div data-banner></div><div class="eyebrow">Shift starts in</div><div class="bignum" data-count>5</div><p class="note">Get your clicking finger ready.</p></main>`;
+const countdownView = () => `<main class="pad center"><div data-banner></div><div class="eyebrow">Game starts in</div><div class="bignum" data-count>5</div><p class="note">Get your clicking finger ready.</p></main>`;
 
 function playView(side: Side): string {
   return `<header class="hdr ${side}">${tieHTML(SIDE_COLOR[side])}<div class="who"><small>${SIDE_LABEL[side]}</small><b>${esc(me?.name ?? '')}</b></div><div class="clock" data-clock>0:00</div></header>
@@ -217,7 +217,7 @@ function overView(s: ClientState): string {
   const r = s.result;
   const mine = s.players.find((p) => p.id === me?.id)?.side;
   const won = r && r.winner !== 'tie' && r.winner === mine;
-  const title = !r ? '' : r.winner === 'tie' ? 'A tie!' : won ? 'Promotion! You won!' : 'Downsized. You lost.';
+  const title = !r ? '' : r.winner === 'tie' ? 'A tie!' : won ? 'You won!' : 'You lost.';
   return `<main class="pad center"><div class="titleblock">${gearHTML('', 12)}</div><h2 class="big">${title}</h2>
     <div class="finalrow"><div class="sc left"><small>Left</small><b>${num(r?.left ?? 0)}</b></div><div class="sc right"><small>Right</small><b>${num(r?.right ?? 0)}</b></div></div>
     <p class="note">You clicked ${num(myTotal)} times. Waiting for the host…</p></main>`;
