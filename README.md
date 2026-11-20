@@ -6,7 +6,7 @@ A two-team, roguelike button-clicking war: one laptop/TV shows the main screen, 
 
 1. **Lobby** – the host opens `/host.html`; players join with the room code and pick the **left (red)** or **right (blue)** team. You can swap teams at any time in the lobby. Pick the shift length and hit start.
 2. **Countdown** – 5 seconds. Teams are locked.
-3. **Play** – everyone gets one big button (red for left, blue for right). Clicks go into a **shared team pool**. The host picks the win condition in the lobby: **timed** (3-20 minutes, most clicks when the clock runs out) or **target** (first team to 1,000 / 10k / 100k / 1M / 10M clicks). Target mode is checked lazily too: the server wakes itself near the moment auto clickers are projected to cross the line, and button presses are checked as they arrive.
+3. **Play** – everyone gets one big button (red for left, blue for right). Clicks go into a **shared team pool**. The host picks the win condition in the lobby: **timed** (3-20 minutes, most clicks when the clock runs out) or **target** (first team to 1,000 / 10k / 100k / 1M / 10M clicks). Target mode adds **no traffic or timers of its own**: a win is noticed only when the totals are being worked out anyway (a shop opening, a purchase or attack, or a scoreboard refresh beat), so a team can overshoot the target slightly before the game ends.
 4. **The shop** – one random-ish shop is offered to **one player per team at a time**, round-robin:
    - When it opens, the team's clicks are **snapshotted**: that is your budget. Clicks earned afterwards can't be spent.
    - Opening it starts a **10 s** timer. Closing early (or buying something, which closes it) makes the next player wait for the timer; if it already expired the shop goes straight to the next player.

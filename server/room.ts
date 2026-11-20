@@ -195,7 +195,6 @@ export class Room {
   clicks(playerId: string, n: unknown) {
     if (this.phase !== 'play' || !this.engine) return;
     this.engine.clicks(playerId, Number(n), Date.now());
-    if (this.engine.finished) this.broadcast(); // that click crossed the target
     // No broadcast on purpose: the totals reach the screens when something computes them.
   }
 

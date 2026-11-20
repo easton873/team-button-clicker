@@ -217,15 +217,11 @@ export class Engine {
     for (const side of SIDES) {
       const t = this.teams[side];
       if (!t.holder && t.nextOfferAt !== null) w = Math.min(w, t.nextOfferAt);
-      if (this.target !== null) {
-        // Auto clickers can carry a team over the line between refreshes: wake up when it's projected to.
-        const net = this.autoEffective(side, this.last) - this.rate(other(side), (p) => p.drain);
-        if (net > 0) w = Math.min(w, Math.max(this.last + 250, this.last + ((this.target - t.clicks) / net) * 1000));
-      }
     }
     return Number.isFinite(w) ? w : null;
   }
 
+  /** Only ever asked inside update(), i.e. when the totals are being worked out anyway. */
   private hitTarget() {
     return this.target !== null && SIDES.some((s) => this.teams[s].clicks >= this.target!);
   }
@@ -272,11 +268,6 @@ export class Engine {
     p.lastClickAt = now;
     p.clicksMade += n;
     team.clicks += n * (1 + team.bonus) * m;
-    if (this.hitTarget()) {
-      this.advance(now);
-      this.finish();
-      return;
-    }
     if (p.siphon > 0) {
       this.advance(now); // shields must be current before we steal through them
       const stolen = this.damage(other(p.side), n * p.siphon, now);

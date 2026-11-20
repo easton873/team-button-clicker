@@ -281,29 +281,29 @@ test('the game ends and picks a winner by clicks', () => {
   assert.equal(e.nextWake(), null);
 });
 
-test('target mode: first to the target wins, by clicks or by auto clickers', () => {
+test('target mode is only noticed when the totals are worked out, never by clicks or timers', () => {
   const mkT = () => new Engine(roster, 0, { target: 100, rng: () => 0.5 });
   const e = mkT();
   assert.equal(e.endsAt, null);
-  e.clicks('a1', 20, 1 * S);
-  assert.ok(!e.finished);
+  assert.equal(e.nextWake(), CONFIG.firstShopDelayMs, 'no wake-up is scheduled just for the target');
   e.teams.right.clicks = 99;
   e.clicks('b1', 5, 2 * S);
+  assert.ok(!e.finished, 'a click batch does not end the game by itself');
+  e.update(3 * S); // a snapshot / refresh / purchase computes the totals
   assert.ok(e.finished);
   assert.equal(e.winner, 'right');
-  // auto clickers: the engine asks to be woken near the crossing and finishes then
   const a = mkT();
   a.players.get('a1')!.autos.push({ tier: 1, rate: 10 });
-  const w = a.nextWake()!;
-  assert.ok(w >= 9 * S && w <= 10.5 * S, `projected crossing near 10s (${w})`);
-  a.update(w);
-  assert.ok(a.finished, 'finished at the wake-up');
+  assert.equal(a.nextWake(), CONFIG.firstShopDelayMs, 'auto clickers do not schedule a wake-up either');
+  a.update(5 * S);
+  assert.ok(!a.finished);
+  a.update(CONFIG.firstShopDelayMs + 1 * S); // the first shop opening is when it gets noticed
+  assert.ok(a.finished);
   assert.equal(a.winner, 'left');
-  // time mode never finishes early on clicks
   const t = mk();
   t.teams.left.clicks = 1e9;
   t.update(10 * S);
-  assert.ok(!t.finished);
+  assert.ok(!t.finished, 'time mode never ends early on clicks');
 });
 
 console.log(`${n} engine tests passed`);
