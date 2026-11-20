@@ -1,10 +1,10 @@
-# Gears & Ties
+# Team Button Clicker
 
-A two-team, roguelike button-clicking war: one laptop/TV shows the main screen, everyone else plays on their phone. Built on the same lobby / room-code / QR-join setup as [the-name-game](https://github.com/easton873/the-name-game). Theme: factory floor meets corner office (gears, ties, brass and pinstripes).
+A two-team, roguelike button-clicking war: one laptop/TV shows the main screen, everyone else plays on their phone. Built on the same lobby / room-code / QR-join setup as [the-name-game](https://github.com/easton873/the-name-game).
 
 ## How it plays
 
-1. **Lobby** – the host opens `/host.html`; players join with the room code and pick the **left (red)** or **right (blue)** team. You can swap teams at any time in the lobby. Pick the shift length and hit start.
+1. **Lobby** – the host opens `/host.html`; players join with the room code and pick the **left (red)** or **right (blue)** team. You can swap teams at any time in the lobby. Pick the game length and hit start.
 2. **Countdown** – 5 seconds. Teams are locked.
 3. **Play** – everyone gets one big button (red for left, blue for right). Clicks go into a **shared team pool**. The host picks the win condition in the lobby: **timed** (3-20 minutes, most clicks when the clock runs out) or **target** (first team to 1,000 / 10k / 100k / 1M / 10M clicks). Target mode adds **no traffic or timers of its own**: a win is noticed only when the totals are being worked out anyway (a shop opening, a purchase or attack), so a team can overshoot the target slightly before the game ends.
 4. **The shop** – one random-ish shop is offered to **one player per team at a time**, round-robin:

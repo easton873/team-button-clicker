@@ -4,7 +4,7 @@ import './host.css';
 import { DURATION_OPTIONS_MIN, SIDES, TARGET_OPTIONS, type ClientState, type Side, type TeamBoard } from '../../shared/types';
 import { $, briefcaseHTML, esc, gearHTML, mmss, num, rate, SIDE_COLOR, SIDE_LABEL, serverTime, socket, syncClock, tieHTML, project } from './common';
 
-const STORE = 'gearsandties.host';
+const STORE = 'teambuttonclicker.host';
 const stage = $('#stage')!;
 
 let state: ClientState | null = null;
@@ -85,7 +85,7 @@ function lobbyView(s: ClientState): string {
   const col = (side: Side) => `<div class="team plate ${side}"><div class="team-h">${tieHTML(SIDE_COLOR[side])}<h2>${sideName(side)}</h2></div><div class="members" data-members="${side}"></div></div>`;
   return `<section class="lobby">
     <div class="lobby-left">
-      <div class="logo"><div class="gears">${gearHTML('', 12, 'currentColor')}${gearHTML('rev', 8, 'currentColor')}</div><h1 class="display">Gears<br />&amp; Ties</h1></div>
+      <div class="logo"><div class="gears">${gearHTML('', 12, 'currentColor')}${gearHTML('rev', 8, 'currentColor')}</div><h1 class="display">Team Button Clicker</h1></div>
       <div class="join-card plate">
         ${qrDataUrl ? `<img class="qr" src="${qrDataUrl}" alt="QR code to join" />` : '<div class="qr"></div>'}
         <div class="t">Scan the code or go to<br /><b>${esc(joinBase.replace(/^https?:\/\//, ''))}</b><br />and enter room code<div class="roomcode">${esc(s.code)}</div></div>
@@ -96,7 +96,7 @@ function lobbyView(s: ClientState): string {
       <div class="pending" data-pending></div>
       <div class="opts plate">
         <label>How to win <select id="mode"><option value="time">Most clicks when time runs out</option><option value="target">First team to a target</option></select></label>
-        <label data-for="time">Shift length <select id="dur">${DURATION_OPTIONS_MIN.map((m) => `<option value="${m}">${m} minutes</option>`).join('')}</select></label>
+        <label data-for="time">Game length <select id="dur">${DURATION_OPTIONS_MIN.map((m) => `<option value="${m}">${m} minutes</option>`).join('')}</select></label>
         <label data-for="target">Target <select id="target">${TARGET_OPTIONS.map((n) => `<option value="${n}">${num(n)} clicks</option>`).join('')}</select></label>
       </div>
       <button class="btn startbtn" id="start" disabled>Start game</button>
@@ -126,10 +126,10 @@ function lobbyLive(s: ClientState) {
   const ok = s.players.filter((p) => p.connected).length >= 2 && l > 0 && r > 0;
   const start = $<HTMLButtonElement>('#start')!;
   start.disabled = !ok;
-  start.textContent = ok ? 'Start the shift' : 'Need players on both teams';
+  start.textContent = ok ? 'Start the game' : 'Need players on both teams';
 }
 
-const countdownView = () => `<section class="center"><div class="eyebrow">Shift starts in</div><div class="bignum" data-count>5</div><div class="sub">Teams are locked. Find your button.</div></section>`;
+const countdownView = () => `<section class="center"><div class="eyebrow">Game starts in</div><div class="bignum" data-count>5</div><div class="sub">Teams are locked. Find your button.</div></section>`;
 
 function teamPanel(side: Side): string {
   return `<div class="panel plate ${side}" data-side="${side}">
@@ -195,7 +195,7 @@ function overView(s: ClientState): string {
   const title = w === 'tie' ? "It's a tie!" : `${sideName(w)} wins!`;
   const color = w === 'tie' ? 'var(--brass)' : SIDE_COLOR[w];
   return `<section class="center over">
-    <div class="eyebrow">${s.target ? 'Target reached' : 'Shift over'}</div>
+    <div class="eyebrow">${s.target ? 'Target reached' : 'Game over'}</div>
     <h1 class="display" style="color:${color}">${title}</h1>
     <div class="final">
       <div class="plate left ${w === 'left' ? 'win' : ''}"><small>LEFT TEAM</small><b>${num(r?.left ?? 0)}</b></div>
