@@ -255,7 +255,7 @@ export class Engine {
     const p = this.players.get(id);
     if (!p || this.finished || !Number.isFinite(n) || n < 1) return;
     const elapsed = Math.max(0, now - p.lastClickAt);
-    const window = Math.min(Math.max(elapsed, 1000), 10000);
+    const window = Math.max(elapsed, 1000);
     n = Math.min(Math.floor(n), Math.ceil((window / 1000) * CONFIG.maxClicksPerSecond) + 5);
     const team = this.teams[p.side];
     // A boost that ended partway through this batch only counts for the part of it that was boosted.

@@ -115,8 +115,6 @@ export interface ClientState {
   board: Board | null;
   feed: FeedEntry[];
   result: { winner: Side | 'tie'; left: number; right: number } | null;
-  /** How often phones should report their clicks. */
-  clickFlushMs: number;
   you: YouInfo | null;
 }
 
@@ -131,13 +129,13 @@ export interface ClientToServerEvents {
   'host:kick': (p: { playerId: string }) => void;
   'player:join': (p: { code: string; name: string; token?: string }, cb: Ack<{ token: string; playerId: string }>) => void;
   'player:setSide': (p: { side: Side }, cb?: Ack) => void;
-  /** A batch of button presses. */
-  'player:clicks': (p: { n: number }) => void;
   'player:buy': (p: { itemId: string }, cb?: Ack) => void;
   'player:closeShop': (cb?: Ack) => void;
 }
 
 export interface ServerToClientEvents {
   state: (s: ClientState) => void;
+  /** The server is about to work out the totals and asks for your running click count (an ack, never pushed unasked). */
+  collect: (cb: (totalClicks: number) => void) => void;
   closed: (reason: string) => void;
 }

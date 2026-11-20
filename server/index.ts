@@ -97,13 +97,12 @@ io.on('connection', (socket) => {
   socket.on('host:backToLobby', asHost((r) => r.backToLobby()));
   socket.on('host:kick', (p) => room && role === 'host' && room.kick(String(p?.playerId)));
 
-  const asPlayer = (fn: (r: Room, id: string) => { ok: boolean } | void, cb?: (res: any) => void) => {
+  const asPlayer = (fn: (r: Room, id: string) => { ok: boolean } | Promise<{ ok: boolean }> | void, cb?: (res: any) => void) => {
     if (!room || role !== 'player' || !playerId) return;
     const res = fn(room, playerId);
-    if (res) cb?.(res);
+    if (res) void Promise.resolve(res).then((r) => cb?.(r));
   };
   socket.on('player:setSide', (p, cb) => asPlayer((r, id) => r.setSide(id, p?.side), cb));
-  socket.on('player:clicks', (p) => asPlayer((r, id) => void r.clicks(id, p?.n)));
   socket.on('player:buy', (p, cb) => asPlayer((r, id) => r.buy(id, p?.itemId), cb));
   socket.on('player:closeShop', (cb) => asPlayer((r, id) => r.closeShop(id), cb));
 

@@ -26,7 +26,9 @@ Nothing ticks. Each player just owns a few **rates** (their auto clickers, shiel
 - a shop opens (that's the snapshot), a purchase or attack happens, the game ends, or
 - the main-screen refresh beat fires.
 
-Every broadcast works the numbers out first, so whatever reaches the screens is fresh. Button presses are batched on the phone (`clickFlushMs`, 1 s) and added server-side **without a broadcast**.
+Each of those first collects clicks from the phones (see below), then works out the numbers, then broadcasts.
+
+Every broadcast works the numbers out first, so whatever reaches the screens is fresh. **Phones never push clicks.** Presses are counted locally, and the server *asks* every phone for its running total (a socket ack, once) only when it is about to work out the totals; the phone answers with a cumulative count, so a lost answer is just picked up next time. With nobody shopping and the refresh beat off, there is no click traffic at all.
 
 ### Main-screen refresh (`server/config.ts`)
 
@@ -34,7 +36,7 @@ Every broadcast works the numbers out first, so whatever reaches the screens is 
 | --- | --- | --- |
 | `earlyUpdateMs` / `earlyWindowMs` | 5 s / 30 s | scoreboard refresh beat for the first 30 s of a game |
 | `fallbackUpdateMs` | 5 s | after that, a slow beat so the screen never goes stale. `FALLBACK_UPDATE_MS=0` env var turns it off; the host can also tick/untick it in the lobby |
-| `clickFlushMs` | 1 s | how often phones report presses |
+| `collectTimeoutMs` / `collectMinGapMs` | 1.5 s / 0.4 s | how long to wait for a phone's click total, and how recent a collection can be reused |
 | `shopHoldMs` / `firstShopDelayMs` | 10 s / 10 s | shop minimum hold, and wait before the very first shop |
 
 ## Run it

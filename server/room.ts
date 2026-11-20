@@ -25,6 +25,8 @@ interface Player {
   name: string;
   socketId: string | null;
   side: Side | null;
+  /** The running click total this phone last reported, so a lost or repeated report can't double-count. */
+  reported: number;
 }
 
 export class Room {
@@ -41,6 +43,8 @@ export class Room {
   private tickTimer: NodeJS.Timeout | null = null;
   private countdownTimer: NodeJS.Timeout | null = null;
   private idleTimer: NodeJS.Timeout | null = null;
+  private chain: Promise<unknown> = Promise.resolve();
+  private lastCollectAt = 0;
   onDestroy: (() => void) | null = null;
 
   constructor(
@@ -62,14 +66,14 @@ export class Room {
     this.hostSocketId = socketId;
     if (this.idleTimer) clearTimeout(this.idleTimer);
     this.idleTimer = null;
-    this.broadcast();
+    this.refresh();
   }
 
   detachHost(socketId: string) {
     if (this.hostSocketId !== socketId) return;
     this.hostSocketId = null;
     this.idleTimer = setTimeout(() => this.destroy('The host left and the room timed out.'), CONFIG.roomIdleMs);
-    this.broadcast();
+    this.refresh();
   }
 
   destroy(reason: string) {
@@ -91,8 +95,8 @@ export class Room {
       const existing = [...this.players.values()].find((p) => p.token === token);
       if (existing) {
         existing.socketId = socketId;
-        this.engine?.setConnected(existing.id, true, Date.now());
-        this.afterChange();
+        if (this.engine) void this.op(() => this.engine?.setConnected(existing.id, true, Date.now()));
+        else this.broadcast();
         return { ok: true, player: existing };
       }
     }
@@ -106,6 +110,7 @@ export class Room {
       name: clean,
       socketId,
       side: null,
+      reported: 0,
     };
     this.players.set(player.id, player);
     this.broadcast();
@@ -116,8 +121,8 @@ export class Room {
     const p = [...this.players.values()].find((x) => x.socketId === socketId);
     if (!p) return;
     p.socketId = null;
-    this.engine?.setConnected(p.id, false, Date.now());
-    this.afterChange();
+    if (this.engine) void this.op(() => this.engine?.setConnected(p.id, false, Date.now()));
+    else this.broadcast();
   }
 
   kick(playerId: string) {
@@ -177,6 +182,8 @@ export class Room {
       now,
       this.settings.mode === 'target' ? { target: this.settings.targetClicks } : { durationMs: this.settings.durationMin * 60000 * SCALE },
     );
+    for (const p of this.players.values()) p.reported = 0; // phones restart their counters with the game
+    this.lastCollectAt = 0;
     this.phase = 'play';
     this.countdownEndsAt = null;
     this.broadcast();
@@ -185,6 +192,7 @@ export class Room {
   backToLobby() {
     this.clearTimers();
     this.engine = null;
+    this.chain = Promise.resolve();
     this.countdownEndsAt = null;
     this.phase = 'lobby';
     this.broadcast();
@@ -192,29 +200,60 @@ export class Room {
 
   // ------------------------------------------------------------------ play
 
-  clicks(playerId: string, n: unknown) {
-    if (this.phase !== 'play' || !this.engine) return;
-    this.engine.clicks(playerId, Number(n), Date.now());
-    // No broadcast on purpose: the totals reach the screens when something computes them.
+  /**
+   * Everything that touches the numbers goes through here, one at a time: first the phones are asked for their
+   * clicks (see collect), then `fn` runs against fresh totals, then everybody gets the new state.
+   */
+  private op<T>(fn: () => T): Promise<T> {
+    const run = this.chain.then(async () => {
+      if (this.phase === 'play' && this.engine) await this.collect();
+      const r = fn();
+      this.broadcast();
+      return r;
+    });
+    this.chain = run.catch(() => undefined);
+    return run;
   }
 
-  buy(playerId: string, itemId: unknown): Result {
-    if (this.phase !== 'play' || !this.engine) return err('The game is not running.');
-    const res = this.engine.buy(playerId, String(itemId), Date.now());
-    this.afterChange();
-    return res;
+  /** A refresh with nothing else to do: collect, work out the totals, tell everyone. */
+  private refresh() {
+    if (this.phase === 'play' && this.engine) void this.op(() => undefined);
+    else this.broadcast();
   }
 
-  closeShop(playerId: string): Result {
-    if (this.phase !== 'play' || !this.engine) return err('The game is not running.');
-    const res = this.engine.closeShop(playerId, Date.now());
-    this.afterChange();
-    return res;
+  /**
+   * Asks every connected phone for its running click total, once, and credits the difference since last time.
+   * Nothing is sent by the phones unless asked, so click traffic only happens when the totals are needed.
+   */
+  private async collect() {
+    if (!this.engine || Date.now() - this.lastCollectAt < CONFIG.collectMinGapMs) return;
+    this.lastCollectAt = Date.now();
+    await Promise.all(
+      [...this.players.values()].map(async (p) => {
+        const sock = p.socketId ? this.io.sockets.sockets.get(p.socketId) : undefined;
+        if (!sock) return;
+        try {
+          const total: unknown = await (sock as any).timeout(CONFIG.collectTimeoutMs).emitWithAck('collect');
+          if (typeof total !== 'number' || !Number.isFinite(total) || total < 0) return;
+          // A phone that reloaded restarts from zero: count its new total as new clicks.
+          const diff = total >= p.reported ? total - p.reported : total;
+          p.reported = total;
+          if (diff > 0) this.engine?.clicks(p.id, diff, Date.now());
+        } catch {
+          /* no answer in time: its clicks are picked up by the next collection (the total is cumulative) */
+        }
+      }),
+    );
   }
 
-  /** Something may have moved: re-arm the wake-up timer and tell everybody. */
-  private afterChange() {
-    this.broadcast();
+  buy(playerId: string, itemId: unknown): Promise<Result> {
+    if (this.phase !== 'play' || !this.engine) return Promise.resolve(err('The game is not running.'));
+    return this.op(() => this.engine!.buy(playerId, String(itemId), Date.now()));
+  }
+
+  closeShop(playerId: string): Promise<Result> {
+    if (this.phase !== 'play' || !this.engine) return Promise.resolve(err('The game is not running.'));
+    return this.op(() => this.engine!.closeShop(playerId, Date.now()));
   }
 
   /** Works out the numbers up to now, notices a finished game, and arms the next timers. */
@@ -237,7 +276,7 @@ export class Room {
     if (w == null) return;
     this.wakeTimer = setTimeout(() => {
       this.wakeTimer = null;
-      this.broadcast(); // a shop opening (or the end) is a reason to refresh the screens
+      this.refresh(); // a shop opening (or the end) is a reason to collect and refresh the screens
     }, Math.max(0, w - Date.now()) + 5);
   }
 
@@ -249,7 +288,7 @@ export class Room {
     if (every <= 0) return;
     this.tickTimer = setTimeout(() => {
       this.tickTimer = null;
-      this.broadcast();
+      this.refresh();
     }, every);
   }
 
@@ -277,7 +316,6 @@ export class Room {
       result: this.engine?.finished
         ? { winner: this.engine.winner!, left: Math.floor(this.engine.teams.left.clicks), right: Math.floor(this.engine.teams.right.clicks) }
         : null,
-      clickFlushMs: CONFIG.clickFlushMs,
       you: youId && this.engine ? this.engine.you(youId, now) : youId ? { id: youId, side: this.players.get(youId)?.side ?? null, clickValue: 1, shop: null, perks: [], queuePos: null } : null,
     });
     if (this.hostSocketId) this.io.to(this.hostSocketId).emit('state', state(null));

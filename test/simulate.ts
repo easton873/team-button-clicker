@@ -6,7 +6,7 @@ import type { ClientState, ClientToServerEvents, ServerToClientEvents } from '..
 
 type S = Socket<ServerToClientEvents, ClientToServerEvents>;
 const PORT = 3218;
-const server = spawn('npx', ['tsx', 'server/index.ts'], { env: { ...process.env, PORT: String(PORT), TIMING_SCALE: '0.05' }, stdio: 'ignore', detached: true });
+const server = spawn('npx', ['tsx', 'server/index.ts'], { env: { ...process.env, PORT: String(PORT), TIMING_SCALE: '0.05', MAX_CLICKS_PER_SECOND: '100000' }, stdio: 'ignore', detached: true });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const connect = (): S => io(`http://localhost:${PORT}`, { transports: ['websocket'] });
 const emit = <T = any>(s: S, ev: string, ...args: any[]): Promise<T> => new Promise((res) => (s as any).emit(ev, ...args, res));
@@ -28,12 +28,17 @@ async function main() {
     hostUpdates++;
   });
 
-  const bots: Record<string, { s: S; id: string; st?: ClientState }> = {};
+  const bots: Record<string, { s: S; id: string; st?: ClientState; total: number; asked: number }> = {};
   for (const name of ['Ann', 'Bo', 'Cy']) {
     const s = connect();
     const r = await emit(s, 'player:join', { code: created.code, name });
     assert.ok(r.ok);
-    bots[name] = { s, id: r.playerId };
+    bots[name] = { s, id: r.playerId, total: 0, asked: 0 };
+    // like the real phone: never push clicks, only answer when the server asks
+    (s as any).on('collect', (cb: (n: number) => void) => {
+      bots[name].asked++;
+      cb(bots[name].total);
+    });
     s.on('state', (st) => (bots[name].st = st));
   }
   await sleep(100);
@@ -68,9 +73,10 @@ async function main() {
 
   // clicking does not broadcast every time
   const before = hostUpdates;
+  const askedBefore = bots.Ann.asked;
   for (let i = 0; i < 20; i++) {
-    bots.Ann.s.emit('player:clicks', { n: 5 });
-    bots.Cy.s.emit('player:clicks', { n: 3 });
+    bots.Ann.total += 5; // pressing the button is purely local
+    bots.Cy.total += 3;
     await sleep(5);
   }
   assert.ok(hostUpdates - before < 10, `clicks must not each trigger a broadcast (saw ${hostUpdates - before})`);
@@ -78,6 +84,7 @@ async function main() {
   await sleep(250);
   assert.ok(hostState.board!.left.clicks >= 90, `left total reaches the screen (${hostState.board!.left.clicks})`);
   assert.ok(hostState.board!.right.clicks >= 50);
+  assert.ok(bots.Ann.asked > askedBefore, 'the server asked for clicks when it needed them');
 
   // the first shop opens for each team, one player at a time, and only the holder sees it
   for (let i = 0; i < 60 && !bots.Ann.st!.you!.shop; i++) await sleep(50);
@@ -113,11 +120,13 @@ async function main() {
   for (let i = 0; i < 50 && hostState.phase !== 'play'; i++) await sleep(50);
   assert.equal(hostState.target, 1000);
   assert.equal(hostState.endsAt, null);
+  bots.Ann.total = 0;
+  bots.Cy.total = 0;
   for (let i = 0; i < 60; i++) {
-    bots.Ann.s.emit('player:clicks', { n: 30 });
+    bots.Ann.total += 30;
     await sleep(50);
   }
-  for (let i = 0; i < 40 && hostState.phase !== 'gameOver'; i++) await sleep(100);
+  for (let i = 0; i < 60 && hostState.phase !== 'gameOver'; i++) await sleep(100);
   assert.equal(hostState.phase, 'gameOver');
   assert.equal(hostState.result!.winner, 'left');
   console.log('simulation passed');

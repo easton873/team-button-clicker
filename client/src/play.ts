@@ -16,9 +16,7 @@ let shopSig = '';
 let shopBusy = false;
 
 // click bookkeeping
-let pending = 0;
-let myTotal = 0;
-let flushTimer: number | null = null;
+let myTotal = 0; // cumulative presses this game; only ever sent when the server asks for it
 
 const params = new URLSearchParams(location.search);
 
@@ -93,6 +91,8 @@ socket.on('closed', (reason) => {
   viewKey = '';
   render();
 });
+// The server asks for our click count only when it's about to work out the totals. We never push it.
+socket.on('collect', (cb) => cb(myTotal));
 socket.on('state', (s) => {
   state = s;
   syncClock(s.serverNow);
@@ -232,7 +232,6 @@ function wireClicker() {
   let lastPop = 0;
   btn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    pending++;
     myTotal++;
     btn.classList.add('down');
     const now = performance.now();
@@ -257,23 +256,6 @@ function wireClicker() {
   btn.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
   btn.addEventListener('click', (e) => e.preventDefault());
 }
-
-function flush() {
-  if (pending > 0 && socket.connected) {
-    socket.emit('player:clicks', { n: pending });
-    pending = 0;
-  }
-}
-const startFlushing = (ms: number) => {
-  if (flushTimer === null) flushTimer = window.setInterval(flush, ms);
-};
-const stopFlushing = () => {
-  if (flushTimer !== null) clearInterval(flushTimer);
-  flushTimer = null;
-  flush();
-};
-window.addEventListener('pagehide', flush);
-document.addEventListener('visibilitychange', () => document.hidden && flush());
 
 // ------------------------------------------------------------------ render
 
@@ -317,7 +299,6 @@ function render() {
     }
     if (key.startsWith('play-')) {
       wireClicker();
-      pending = 0;
       myTotal = 0;
     }
     if (key === 'countdown') {
@@ -327,10 +308,7 @@ function render() {
   }
   if (!s || !me) return;
   if (s.phase === 'lobby') lobbyLive(s);
-  if (s.phase === 'play') {
-    startFlushing(s.clickFlushMs);
-    playLive(s);
-  } else stopFlushing();
+  if (s.phase === 'play') playLive(s);
   localTick();
 }
 

@@ -21,10 +21,16 @@ export const CONFIG = {
   fallbackUpdateMs: Number(process.env.FALLBACK_UPDATE_MS ?? 5000) * SCALE,
   fallbackDefaultOn: process.env.FALLBACK_UPDATE !== 'off',
 
-  /** How often phones report their button presses. Larger = fewer messages. */
-  clickFlushMs: 1000,
+  /**
+   * Phones never send clicks on their own. The server *asks* every phone for its running click count only
+   * when it is about to work out the totals (a shop opening, a purchase, a scoreboard beat), and each phone
+   * answers once. This is how long it waits for a phone to answer before carrying on without it.
+   */
+  collectTimeoutMs: 1500,
+  /** Back-to-back requests (a purchase right after a shop opens) reuse a collection this recent. */
+  collectMinGapMs: 400,
   /** Anti-cheat: more presses per second than this in a batch are ignored. */
-  maxClicksPerSecond: 25,
+  maxClicksPerSecond: Number(process.env.MAX_CLICKS_PER_SECOND ?? 25),
 
   roomIdleMs: 15 * 60 * 1000,
 };
