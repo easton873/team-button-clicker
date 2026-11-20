@@ -91,7 +91,7 @@ async function main() {
   const ann = bots.Ann.st!.you!;
   assert.ok(ann.shop, 'Ann is offered the shop first');
   assert.ok(!bots.Bo.st!.you!.shop, 'Bo is not');
-  assert.equal(ann.shop!.items.length, 3);
+  assert.equal(ann.shop!.items.length, 4);
   assert.ok(ann.shop!.budget > 0);
   const item = ann.shop!.items.find((i) => i.price <= ann.shop!.budget);
   if (item) {

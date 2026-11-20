@@ -6,6 +6,8 @@ export const other = (s: Side): Side => (s === 'left' ? 'right' : 'left');
 
 export type Phase = 'lobby' | 'countdown' | 'play' | 'gameOver';
 export type Rarity = 'common' | 'uncommon' | 'rare';
+/** What a shop item does at a glance: the shop always has an auto clicker, then one of each of the others. */
+export type ShopCategory = 'auto' | 'economic' | 'aggressive' | 'defensive';
 
 export const MAX_PLAYER_NAME_LENGTH = 14;
 export const DURATION_OPTIONS_MIN = [3, 5, 10, 15, 20];
@@ -72,6 +74,7 @@ export interface ShopItemView {
   desc: string;
   tier: 1 | 2 | 3;
   rarity: Rarity;
+  category: ShopCategory;
   /** Sticker price. */
   cost: number;
   /** What it costs this team right now (discount applied, sales tax added). */

@@ -153,7 +153,7 @@ function playView(side: Side): string {
   </div>
   <div class="perks" data-perks></div>
   <div class="clickzone">
-    <button id="clicker" class="clicker ${side}" aria-label="Click">${gearHTML('cg', 14)}<span class="label">CLICK</span></button>
+    <button id="clicker" class="clicker ${side}" aria-label="Click"><span class="label">CLICK</span></button>
     <div class="cv"><b data-cv>+1</b> per click · <span data-my>0</span> by you</div>
   </div>
   <section class="shop plate" data-shop hidden></section>
@@ -165,11 +165,13 @@ function shopSignature(s: ClientState): string {
   return sh ? `${sh.budget}|${sh.items.map((i) => `${i.id}:${i.price}`).join(',')}` : '';
 }
 
+const CAT_TAG: Record<ShopItemView['category'], string> = { auto: 'AUTO', economic: 'ECON', aggressive: 'ATTACK', defensive: 'DEFENSE' };
+
 const itemHTML = (it: ShopItemView, budget: number) => {
   const broke = it.price > budget;
   const hasMod = it.price !== it.cost;
   return `<div class="item ${it.rarity}">
-    <div class="info"><div class="ih"><span class="tier">T${it.tier}</span><b>${esc(it.name)}</b><em>${it.rarity}</em></div><p>${esc(it.desc)}</p></div>
+    <div class="info"><div class="ih"><span class="tier">${CAT_TAG[it.category]}</span><b>${esc(it.name)}</b><em>${it.rarity}</em></div><p>${esc(it.desc)}</p></div>
     <button class="btn buy" data-buy="${it.id}" ${broke ? 'disabled' : ''}><span>BUY</span>${hasMod ? `<s>${num(it.cost)}</s>` : ''}${num(it.price)}${it.tax ? `<small>incl. ${num(it.tax)} tax</small>` : ''}</button>
   </div>`;
 };
