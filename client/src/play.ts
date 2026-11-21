@@ -153,7 +153,7 @@ function playView(side: Side): string {
   </div>
   <div class="perks" data-perks></div>
   <div class="clickzone">
-    <button id="clicker" class="clicker ${side}" aria-label="Click"><span class="label">CLICK</span></button>
+    <button id="clicker" class="clicker ${side}" aria-label="Click"></button>
     <div class="cv"><b data-cv>+1</b> per click · <span data-my>0</span> by you</div>
   </div>
   <section class="shop plate" data-shop hidden></section>
@@ -183,11 +183,13 @@ function renderShop(s: ClientState) {
   if (!sh) {
     el.hidden = true;
     $('#clicker')?.classList.remove('locked');
+    $('.clickzone')?.classList.remove('shopping');
     shopSig = '';
     return;
   }
   el.hidden = false;
   $('#clicker')?.classList.add('locked');
+  $('.clickzone')?.classList.add('shopping');
   if (sig === shopSig) return;
   shopSig = sig;
   shopBusy = false;
