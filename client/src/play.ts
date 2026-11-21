@@ -125,7 +125,7 @@ function lobbyView(): string {
     <div class="teampick">
       ${(['left', 'right'] as Side[])
         .map(
-          (side) => `<button class="pick ${side}" data-side="${side}">${tieHTML(SIDE_COLOR[side])}<b>${SIDE_LABEL[side]}</b><span class="roster" data-roster="${side}"></span><i class="here">✓ You're here</i></button>`,
+          (side) => `<button class="pick ${side}" data-side="${side}">${side === 'left' ? gearHTML('pickgear', 12, SIDE_COLOR[side]) : tieHTML(SIDE_COLOR[side])}<b>${SIDE_LABEL[side]}</b><span class="roster" data-roster="${side}"></span><i class="here">✓ You're here</i></button>`,
         )
         .join('')}
     </div>

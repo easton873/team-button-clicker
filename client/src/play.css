@@ -29,6 +29,7 @@ input { -webkit-user-select: text; user-select: text; }
 .pick.left { background: linear-gradient(180deg, #ee5a52, var(--red) 55%, var(--red-lo)); }
 .pick.right { background: linear-gradient(180deg, #5a95f0, var(--blue) 55%, var(--blue-lo)); }
 .pick .tie { font-size: 22px; }
+.pick .pickgear { width: 55px; height: 55px; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4)); }
 .pick b { font-family: var(--font-display); font-size: 34px; letter-spacing: 2px; text-transform: uppercase; }
 .pick .roster { font-size: 15px; opacity: 0.9; }
 .pick .here { display: none; font-style: normal; font-weight: 700; background: rgba(0, 0, 0, 0.35); padding: 2px 12px; border-radius: 99px; }
