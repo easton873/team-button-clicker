@@ -168,7 +168,7 @@ const T2: Row[] = [
   ['c', 4000, { k: 'auto', rate: 200 }],
   ['u', 10000, { k: 'auto', rate: 500 }],
   ['r', 25000, { k: 'auto', rate: 1000 }],
-  ['c', 1000, { k: 'perClick', n: 1 }],
+  ['c', 100, { k: 'perClick', n: 1 }],
   ['u', 2000, { k: 'perClick', n: 3 }],
   ['r', 25000, { k: 'perClick', n: 10 }],
   ['c', 8000, { k: 'deleteAuto' }],

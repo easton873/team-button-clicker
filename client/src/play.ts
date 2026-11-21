@@ -1,7 +1,7 @@
 import './theme.css';
 import './play.css';
 import { MAX_PLAYER_NAME_LENGTH, type ClientState, type ShopItemView, type Side } from '../../shared/types';
-import { $, briefcaseHTML, esc, gearHTML, mmss, num, project, rate, serverTime, SIDE_LABEL, SIDE_COLOR, socket, syncClock, tieHTML } from './common';
+import { $, briefcaseHTML, esc, gearHTML, mmss, num, project, rate, serverTime, SIDE_LABEL, SIDE_COLOR, socket, syncClock, teamIconHTML } from './common';
 
 const app = $('#app')!;
 const STORE = 'teambuttonclicker.player';
@@ -102,7 +102,7 @@ socket.on('state', (s) => {
 // ------------------------------------------------------------------ views
 
 const sideBanner = (side: Side | null) =>
-  side ? `<div class="banner ${side}">${tieHTML(SIDE_COLOR[side])}<div><small>You're on the</small><b>${SIDE_LABEL[side]}</b></div></div>` : '';
+  side ? `<div class="banner ${side}">${teamIconHTML(side)}<div><small>You're on the</small><b>${SIDE_LABEL[side]}</b></div></div>` : '';
 
 function joinView(): string {
   const want = (params.get('room') || '').toUpperCase();
@@ -125,7 +125,7 @@ function lobbyView(): string {
     <div class="teampick">
       ${(['left', 'right'] as Side[])
         .map(
-          (side) => `<button class="pick ${side}" data-side="${side}">${tieHTML(SIDE_COLOR[side])}<b>${SIDE_LABEL[side]}</b><span class="roster" data-roster="${side}"></span><i class="here">✓ You're here</i></button>`,
+          (side) => `<button class="pick ${side}" data-side="${side}">${teamIconHTML(side)}<b>${SIDE_LABEL[side]}</b><span class="roster" data-roster="${side}"></span><i class="here">✓ You're here</i></button>`,
         )
         .join('')}
     </div>
@@ -146,14 +146,14 @@ function lobbyLive(s: ClientState) {
 const countdownView = () => `<main class="pad center"><div data-banner></div><div class="eyebrow">Game starts in</div><div class="bignum" data-count>5</div><p class="note">Get your clicking finger ready.</p></main>`;
 
 function playView(side: Side): string {
-  return `<header class="hdr ${side}">${tieHTML(SIDE_COLOR[side])}<div class="who"><small>${SIDE_LABEL[side]}</small><b>${esc(me?.name ?? '')}</b></div><div class="clock" data-clock>0:00</div></header>
+  return `<header class="hdr ${side}">${teamIconHTML(side)}<div class="who"><small>${SIDE_LABEL[side]}</small><b>${esc(me?.name ?? '')}</b></div><div class="clock" data-clock>0:00</div></header>
   <div class="scores">
     <div class="sc us ${side}"><small>Your team</small><b data-mine>0</b></div>
     <div class="sc them"><small>Other team</small><b data-foe>0</b></div>
   </div>
   <div class="perks" data-perks></div>
   <div class="clickzone">
-    <button id="clicker" class="clicker ${side}" aria-label="Click"><span class="label">CLICK</span></button>
+    <button id="clicker" class="clicker ${side}" aria-label="Click"></button>
     <div class="cv"><b data-cv>+1</b> per click · <span data-my>0</span> by you</div>
   </div>
   <section class="shop plate" data-shop hidden></section>
@@ -183,11 +183,13 @@ function renderShop(s: ClientState) {
   if (!sh) {
     el.hidden = true;
     $('#clicker')?.classList.remove('locked');
+    $('.clickzone')?.classList.remove('shopping');
     shopSig = '';
     return;
   }
   el.hidden = false;
   $('#clicker')?.classList.add('locked');
+  $('.clickzone')?.classList.add('shopping');
   if (sig === shopSig) return;
   shopSig = sig;
   shopBusy = false;
