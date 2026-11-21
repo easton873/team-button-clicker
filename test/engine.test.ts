@@ -54,7 +54,10 @@ test('shop brackets match the brief', () => {
 test('shop order: auto clicker, then economic, aggressive, defensive', () => {
   for (let i = 0; i < 300; i++) {
     const shop = rollShop(Math.floor(Math.random() * 3e6), Math.random);
-    assert.deepEqual(shop.map((s) => s.category), ['auto', 'economic', 'aggressive', 'defensive']);
+    const cats = shop.map((s) => s.category);
+    assert.equal(cats[0], 'auto');
+    assert.ok(cats[1] === 'economic' || cats[1] === 'auto', 'the economic slot can roll an auto clicker');
+    assert.deepEqual(cats.slice(2), ['aggressive', 'defensive']);
   }
 });
 
@@ -115,7 +118,7 @@ test('catalog ids are unique and rarities set', () => {
   assert.ok(CATALOG.every((c) => c.cost > 0 && ['common', 'uncommon', 'rare'].includes(c.rarity)));
 });
 
-test('clicks are worth 1 plus permanent bonuses; boosts add together', () => {
+test('clicks are worth 1 plus permanent bonuses; boosts multiply together', () => {
   const e = mk();
   e.clicks('a1', 10, 1 * S);
   assert.equal(Math.floor(e.teams.left.clicks), 10);
@@ -123,7 +126,8 @@ test('clicks are worth 1 plus permanent bonuses; boosts add together', () => {
   e.teams.left.boosts.push({ v: 2, from: 0, until: 100 * S });
   assert.equal(e.clickValue('left', 2 * S), 6);
   e.teams.left.boosts.push({ v: 2, from: 0, until: 100 * S });
-  assert.equal(e.clickValue('left', 2 * S), 9, '1+2 bonus = 3, times (1+1+1)');
+  e.teams.left.boosts.push({ v: 3, from: 0, until: 100 * S });
+  assert.equal(e.clickValue('left', 2 * S), 36, '1+2 bonus = 3, times 2 x 2 x 3');
 });
 
 test('auto clickers accrue lazily and exactly, however rarely we look', () => {

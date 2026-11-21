@@ -182,10 +182,12 @@ function renderShop(s: ClientState) {
   const sig = shopSignature(s);
   if (!sh) {
     el.hidden = true;
+    $('#clicker')?.classList.remove('locked');
     shopSig = '';
     return;
   }
   el.hidden = false;
+  $('#clicker')?.classList.add('locked');
   if (sig === shopSig) return;
   shopSig = sig;
   shopBusy = false;
@@ -232,6 +234,7 @@ function wireClicker() {
   let lastPop = 0;
   btn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
+    if (state?.you?.shop) return; // no clicking while the shop is open
     myTotal++;
     btn.classList.add('down');
     const now = performance.now();

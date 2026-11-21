@@ -65,8 +65,8 @@ const err = (error: string): { ok: false; error: string } => ({ ok: false, error
 
 const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
 const active = (list: Timed[], t: number) => list.filter((x) => x.from <= t && x.until > t);
-/** Boosts add up: two 2x boosts make 3x, not 4x. */
-const mult = (list: Timed[], t: number) => 1 + active(list, t).reduce((s, x) => s + (x.v - 1), 0);
+/** Boosts stack by multiplying: a 2x and a 3x together make 6x. */
+const mult = (list: Timed[], t: number) => active(list, t).reduce((m, x) => m * x.v, 1);
 
 export interface EngineOpts {
   /** Time mode: how long the game lasts. */
@@ -276,7 +276,7 @@ export class Engine {
     let m = 1;
     for (const b of team.boosts) {
       const overlap = Math.min(b.until, now) - Math.max(b.from, from);
-      if (overlap > 0) m += (b.v - 1) * (overlap / Math.max(1, now - from));
+      if (overlap > 0) m *= 1 + (b.v - 1) * (overlap / Math.max(1, now - from));
     }
     p.lastClickAt = now;
     p.clicksMade += n;
@@ -385,6 +385,11 @@ export class Engine {
       case 'boost':
         team.boosts.push({ v: e.mult, from: now, until: now + e.sec * 1000 });
         say(`${who}: ${e.mult}x clicking for ${e.sec}s!`);
+        break;
+      case 'bothBoost':
+        team.boosts.push({ v: e.mult, from: now, until: now + e.sec * 1000 });
+        team.autoBoosts.push({ v: e.mult, from: now, until: now + e.sec * 1000 });
+        say(`${who}: clicks AND auto clickers x${e.mult} for ${e.sec}s!`);
         break;
       case 'autoBoost':
         team.autoBoosts.push({ v: e.mult, from: now, until: now + e.sec * 1000 });
