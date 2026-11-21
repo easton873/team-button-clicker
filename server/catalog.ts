@@ -8,6 +8,7 @@ export const MIX_CATEGORIES: MixCategory[] = ['economic', 'aggressive', 'defensi
 export type Effect =
   | { k: 'boost'; mult: number; sec: number } // team clicks worth x for a while
   | { k: 'autoBoost'; mult: number; sec: number } // team auto clickers x for a while
+  | { k: 'bothBoost'; mult: number; sec: number } // team clicks AND auto clickers x for a while
   | { k: 'auto'; rate: number } // an auto clicker (clicks/second)
   | { k: 'perClick'; n: number } // permanent +n per click for the whole team
   | { k: 'shield'; hp: number }
@@ -75,6 +76,8 @@ function text(e: Effect, tier: number, cost: number): { name: string; desc: stri
       return { name: `${e.mult}x Clicking (${e.sec}s)`, desc: `Every click your team makes is worth ${e.mult}x for ${e.sec} seconds.` };
     case 'autoBoost':
       return { name: `Overdrive x${e.mult} (${e.sec}s)`, desc: `Your team's auto clickers run ${e.mult}x faster for ${e.sec} seconds.` };
+    case 'bothBoost':
+      return { name: `Mega Multiplier x${e.mult} (${e.sec}s)`, desc: `Both your team's clicks and auto clickers are worth ${e.mult}x for ${e.sec} seconds. Stacks with other multipliers.` };
     case 'auto':
       return { name: `Auto Clicker ${fmt(e.rate)}/s`, desc: `Your team earns +${fmt(e.rate)} clicks every second until someone destroys it.` };
     case 'perClick':
@@ -121,7 +124,8 @@ const T1: Row[] = [
   ['c', 10, { k: 'boost', mult: 2, sec: 10 }],
   ['u', 25, { k: 'boost', mult: 2, sec: 30 }],
   ['u', 40, { k: 'boost', mult: 3, sec: 10 }],
-  ['u', 60, { k: 'autoBoost', mult: 2, sec: 20 }],
+  ['c', 60, { k: 'autoBoost', mult: 2, sec: 20 }],
+  ['r', 300, { k: 'bothBoost', mult: 2, sec: 15 }],
   ['c', 10, { k: 'auto', rate: 1 }],
   ['u', 80, { k: 'auto', rate: 5 }],
   ['u', 200, { k: 'auto', rate: 10 }],
@@ -156,7 +160,9 @@ const T2: Row[] = [
   ['c', 300, { k: 'boost', mult: 3, sec: 20 }],
   ['u', 400, { k: 'boost', mult: 2, sec: 60 }],
   ['u', 800, { k: 'boost', mult: 5, sec: 20 }],
+  ['c', 1200, { k: 'autoBoost', mult: 3, sec: 20 }],
   ['u', 1500, { k: 'autoBoost', mult: 2, sec: 30 }],
+  ['r', 6000, { k: 'bothBoost', mult: 3, sec: 15 }],
   ['c', 2000, { k: 'auto', rate: 80 }],
   ['c', 2200, { k: 'auto', rate: 100 }],
   ['c', 4000, { k: 'auto', rate: 200 }],
@@ -200,7 +206,9 @@ const T3: Row[] = [
   ['u', 8000, { k: 'boost', mult: 10, sec: 20 }],
   ['u', 12000, { k: 'boost', mult: 3, sec: 120 }],
   ['r', 20000, { k: 'boost', mult: 25, sec: 15 }],
+  ['c', 25000, { k: 'autoBoost', mult: 3, sec: 20 }],
   ['u', 40000, { k: 'autoBoost', mult: 3, sec: 30 }],
+  ['r', 100000, { k: 'bothBoost', mult: 5, sec: 15 }],
   ['r', 150000, { k: 'autoBoost', mult: 5, sec: 20 }],
   ['c', 100000, { k: 'auto', rate: 2500 }],
   ['c', 150000, { k: 'auto', rate: 5000 }],
