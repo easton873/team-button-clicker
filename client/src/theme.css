@@ -78,5 +78,6 @@ h1, h2, h3, .display { font-family: var(--font-display); font-weight: 600; lette
 .btn.blue { color: #fff; background: linear-gradient(180deg, #5a95f0, var(--blue) 55%, var(--blue-lo)); }
 .btn:disabled { cursor: not-allowed; color: var(--dim); background: #262b33; box-shadow: none; transform: translateY(3px); border-style: dashed; }
 
+.teamicon { width: 2.5em; height: 2.5em; flex: none; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4)); }
 .tie { width: 1em; height: 2.5em; flex: none; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4)); }
 .case { width: 1.4em; height: 1.1em; flex: none; }

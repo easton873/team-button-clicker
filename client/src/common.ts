@@ -54,6 +54,10 @@ export function tieHTML(color: string, cls = ''): string {
   </svg>`;
 }
 
+/** A team's icon: a gear for the left (red) team, a necktie for the right (blue) team. */
+export const teamIconHTML = (side: Side): string =>
+  side === 'left' ? gearHTML('teamicon', 12, SIDE_COLOR.left) : tieHTML(SIDE_COLOR[side]);
+
 export const briefcaseHTML = (cls = '') =>
   `<svg class="case ${cls}" viewBox="0 0 40 32" aria-hidden="true"><path d="M14 8V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3" fill="none" stroke="currentColor" stroke-width="3"/><rect x="2" y="8" width="36" height="21" rx="3" fill="currentColor"/><path d="M2 17h36" stroke="#14171c" stroke-width="2"/><rect x="17" y="15" width="6" height="5" rx="1" fill="#14171c"/></svg>`;
 

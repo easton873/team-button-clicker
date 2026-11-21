@@ -2,7 +2,7 @@ import QRCode from 'qrcode';
 import './theme.css';
 import './host.css';
 import { DURATION_OPTIONS_MIN, SIDES, TARGET_OPTIONS, type ClientState, type Side, type TeamBoard } from '../../shared/types';
-import { $, briefcaseHTML, esc, gearHTML, mmss, num, rate, SIDE_COLOR, SIDE_LABEL, serverTime, socket, syncClock, tieHTML, project } from './common';
+import { $, briefcaseHTML, esc, gearHTML, mmss, num, rate, SIDE_COLOR, SIDE_LABEL, serverTime, socket, syncClock, teamIconHTML, project } from './common';
 
 const STORE = 'teambuttonclicker.host';
 const stage = $('#stage')!;
@@ -82,7 +82,7 @@ async function prepareJoinInfo() {
 const sideName = (s: Side) => SIDE_LABEL[s].toUpperCase();
 
 function lobbyView(s: ClientState): string {
-  const col = (side: Side) => `<div class="team plate ${side}"><div class="team-h">${tieHTML(SIDE_COLOR[side])}<h2>${sideName(side)}</h2></div><div class="members" data-members="${side}"></div></div>`;
+  const col = (side: Side) => `<div class="team plate ${side}"><div class="team-h">${teamIconHTML(side)}<h2>${sideName(side)}</h2></div><div class="members" data-members="${side}"></div></div>`;
   return `<section class="lobby">
     <div class="lobby-left">
       <div class="logo"><div class="gears">${gearHTML('', 12, 'currentColor')}${gearHTML('rev', 8, 'currentColor')}</div><h1 class="display">Team Button Clicker</h1></div>
@@ -133,7 +133,7 @@ const countdownView = () => `<section class="center"><div class="eyebrow">Game s
 
 function teamPanel(side: Side): string {
   return `<div class="panel plate ${side}" data-side="${side}">
-    <div class="ph">${tieHTML(SIDE_COLOR[side])}<h2>${sideName(side)}</h2></div>
+    <div class="ph">${teamIconHTML(side)}<h2>${sideName(side)}</h2></div>
     <div class="clicks"><span data-clicks>0</span></div><div class="lbl">CLICKS</div>
     <div class="prog" data-prog hidden><i></i></div>
     <div class="shield"><div class="bar"><i data-sfill></i><b data-speak></b></div><div class="sh-txt">SHIELD <span data-shield>0</span> <small>/ <span data-peak>0</span> peak</small></div></div>
