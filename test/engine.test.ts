@@ -54,7 +54,10 @@ test('shop brackets match the brief', () => {
 test('shop order: auto clicker, then economic, aggressive, defensive', () => {
   for (let i = 0; i < 300; i++) {
     const shop = rollShop(Math.floor(Math.random() * 3e6), Math.random);
-    assert.deepEqual(shop.map((s) => s.category), ['auto', 'economic', 'aggressive', 'defensive']);
+    const cats = shop.map((s) => s.category);
+    assert.equal(cats[0], 'auto');
+    assert.ok(cats[1] === 'economic' || cats[1] === 'auto', 'the economic slot can roll an auto clicker');
+    assert.deepEqual(cats.slice(2), ['aggressive', 'defensive']);
   }
 });
 

@@ -122,10 +122,10 @@ const T1: Row[] = [
   ['u', 25, { k: 'boost', mult: 2, sec: 30 }],
   ['u', 40, { k: 'boost', mult: 3, sec: 10 }],
   ['u', 60, { k: 'autoBoost', mult: 2, sec: 20 }],
-  ['c', 10, { k: 'auto', rate: 0.1 }],
-  ['u', 80, { k: 'auto', rate: 0.5 }],
-  ['u', 200, { k: 'auto', rate: 1 }],
-  ['r', 1500, { k: 'auto', rate: 5 }],
+  ['c', 10, { k: 'auto', rate: 1 }],
+  ['u', 80, { k: 'auto', rate: 5 }],
+  ['u', 200, { k: 'auto', rate: 10 }],
+  ['r', 1500, { k: 'auto', rate: 50 }],
   ['r', 500, { k: 'perClick', n: 1 }],
   ['c', 100, { k: 'deleteAuto' }],
   ['c', 75, { k: 'remove', n: 100 }],
@@ -158,11 +158,11 @@ const T2: Row[] = [
   ['u', 400, { k: 'boost', mult: 2, sec: 60 }],
   ['u', 800, { k: 'boost', mult: 5, sec: 20 }],
   ['u', 1500, { k: 'autoBoost', mult: 2, sec: 30 }],
-  ['c', 2000, { k: 'auto', rate: 8 }],
-  ['c', 2200, { k: 'auto', rate: 10 }],
-  ['c', 4000, { k: 'auto', rate: 20 }],
-  ['u', 10000, { k: 'auto', rate: 50 }],
-  ['r', 25000, { k: 'auto', rate: 100 }],
+  ['c', 2000, { k: 'auto', rate: 80 }],
+  ['c', 2200, { k: 'auto', rate: 100 }],
+  ['c', 4000, { k: 'auto', rate: 200 }],
+  ['u', 10000, { k: 'auto', rate: 500 }],
+  ['r', 25000, { k: 'auto', rate: 1000 }],
   ['c', 1000, { k: 'perClick', n: 1 }],
   ['u', 2000, { k: 'perClick', n: 3 }],
   ['r', 25000, { k: 'perClick', n: 10 }],
@@ -203,11 +203,11 @@ const T3: Row[] = [
   ['r', 20000, { k: 'boost', mult: 25, sec: 15 }],
   ['u', 40000, { k: 'autoBoost', mult: 3, sec: 30 }],
   ['r', 150000, { k: 'autoBoost', mult: 5, sec: 20 }],
-  ['c', 100000, { k: 'auto', rate: 250 }],
-  ['c', 150000, { k: 'auto', rate: 500 }],
-  ['c', 200000, { k: 'auto', rate: 750 }],
-  ['u', 500000, { k: 'auto', rate: 1000 }],
-  ['r', 3500000, { k: 'auto', rate: 10000 }],
+  ['c', 100000, { k: 'auto', rate: 2500 }],
+  ['c', 150000, { k: 'auto', rate: 5000 }],
+  ['c', 200000, { k: 'auto', rate: 7500 }],
+  ['u', 500000, { k: 'auto', rate: 10000 }],
+  ['r', 3500000, { k: 'auto', rate: 100000 }],
   ['c', 50000, { k: 'perClick', n: 25 }],
   ['c', 55000, { k: 'perClick', n: 30 }],
   ['c', 60000, { k: 'perClick', n: 35 }],
@@ -316,7 +316,7 @@ function weighted<T>(list: T[], weight: (t: T) => number, rng: () => number): T 
  * Rolls a shop, in this order:
  *  1. An auto clicker: any tier, picked at random from the three best (by clicks/second) the team can afford.
  *     If it can't afford any, the cheapest auto clicker is shown anyway. Never affected by the odds upgrades.
- *  2. Economic, 3. aggressive, 4. defensive: each rolls its category using the team's `weights`.
+ *  2. Economic (auto clickers count as economic here too), 3. aggressive, 4. defensive: each rolls its category using the team's `weights`.
  *  5. One wildcard (any of the three categories, evenly) for each extra slot bought.
  * Items come from the tiers the team's click total unlocks (`slotTiers`), weighted by rarity, preferring ones
  * the team can afford, with no repeats.
@@ -332,7 +332,7 @@ export function rollShop(clicks: number, rng: () => number, opts: ShopOpts = NO_
   const tiers = new Set(slotTiers(clicks));
   const pick = (cat: MixCategory): ItemDef | null => {
     const all = CATALOG.filter(
-      (i) => i.category === cat && tiers.has(i.tier) && !out.includes(i) && !(i.eff.k === 'slot' && opts.extraSlots >= MAX_EXTRA_SLOTS),
+      (i) => (i.category === cat || (cat === 'economic' && i.category === 'auto')) && tiers.has(i.tier) && !out.includes(i) && !(i.eff.k === 'slot' && opts.extraSlots >= MAX_EXTRA_SLOTS),
     );
     const affordable = all.filter((i) => i.cost <= clicks);
     const pool = affordable.length ? affordable : all;
