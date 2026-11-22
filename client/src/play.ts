@@ -156,7 +156,7 @@ function playView(side: Side): string {
     <button id="clicker" class="clicker ${side}" aria-label="Click"></button>
     <div class="cv"><b data-cv>+1</b> per click · <span data-my>0</span> by you</div>
   </div>
-  <section class="shop plate" data-shop hidden></section>
+  <section class="shop" data-shop hidden></section>
   <footer class="status" data-status></footer>`;
 }
 
@@ -183,19 +183,17 @@ function renderShop(s: ClientState) {
   if (!sh) {
     el.hidden = true;
     $('#clicker')?.classList.remove('locked');
-    $('.clickzone')?.classList.remove('shopping');
     shopSig = '';
     return;
   }
   el.hidden = false;
   $('#clicker')?.classList.add('locked');
-  $('.clickzone')?.classList.add('shopping');
   if (sig === shopSig) return;
   shopSig = sig;
   shopBusy = false;
-  el.innerHTML = `<div class="sh-h">${briefcaseHTML()}<div><h3>Procurement Desk</h3><small>Budget locked at <b>${num(sh.budget)}</b> clicks</small></div><button class="btn steel close" data-close>Close</button></div>
+  el.innerHTML = `<div class="sheet plate"><div class="sh-h">${briefcaseHTML()}<div><h3>Shop</h3><small>Budget locked at <b>${num(sh.budget)}</b> clicks</small></div><button class="btn steel close" data-close>Close</button></div>
     <div class="hold" data-hold></div><div class="error" data-shoperr></div>
-    <div class="items">${sh.items.map((it) => itemHTML(it, sh.budget)).join('')}</div>`;
+    <div class="items">${sh.items.map((it) => itemHTML(it, sh.budget)).join('')}</div></div>`;
   $('.items', el)!.scrollTop = 0;
 }
 
@@ -211,7 +209,7 @@ function playLive(s: ClientState) {
   const holder = s.players.find((p) => p.id === t.holderId);
   let status = '';
   if (!you.shop) {
-    if (holder) status = `${briefcaseHTML()} <b>${esc(holder.name)}</b> is at the procurement desk`;
+    if (holder) status = `${briefcaseHTML()} <b>${esc(holder.name)}</b> is at the shop`;
     else if (t.nextOfferAt) status = `Shop opens in <b data-opens="${t.nextOfferAt}">…</b>`;
     if (you.queuePos !== null && (holder || t.nextOfferAt)) status += ` · ${you.queuePos === 0 ? "<b>you're up next!</b>" : `${you.queuePos} ahead of you`}`;
   } else status = 'Keep clicking while you shop!';
