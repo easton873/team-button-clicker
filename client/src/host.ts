@@ -173,7 +173,7 @@ function playLive(s: ClientState) {
       .join('');
     const holder = members.find((p) => p.id === t.holderId);
     $('[data-shopline]', el)!.innerHTML = holder
-      ? `${briefcaseHTML()} <b>${esc(holder.name)}</b> is at the procurement desk`
+      ? `${briefcaseHTML()} <b>${esc(holder.name)}</b> is at the shop`
       : t.nextOfferAt
         ? `Next shop opens in <b data-opens="${t.nextOfferAt}">…</b>`
         : '';

@@ -68,7 +68,6 @@ input { -webkit-user-select: text; user-select: text; }
 .clicker.left { background: radial-gradient(circle at 35% 28%, #ff8279, var(--red) 50%, var(--red-lo)); }
 .clicker.right { background: radial-gradient(circle at 35% 28%, #82b4ff, var(--blue) 50%, var(--blue-lo)); }
 .clicker.locked { display: none; }
-.clickzone.shopping { display: none; }
 .clicker.down { transform: translateY(8px) scale(0.985); box-shadow: 0 4px 0 #0d0f12, 0 0 0 4px #0d0f12, inset 0 6px 14px rgba(255, 255, 255, 0.25), inset 0 -10px 20px rgba(0, 0, 0, 0.4); }
 .clicker .label { position: relative; font-family: var(--font-display); font-weight: 700; font-size: 17cqw; letter-spacing: 0.1em; text-shadow: 0 0.04em 0 rgba(0, 0, 0, 0.45); pointer-events: none; }
 .clicker .pop { position: absolute; pointer-events: none; font-family: var(--font-display); font-weight: 700; font-size: 26px; color: var(--brass-hi); text-shadow: 0 2px 0 #000; animation: floatup 0.6s ease-out forwards; }
@@ -79,8 +78,10 @@ input { -webkit-user-select: text; user-select: text; }
 .status .case { width: 20px; color: var(--brass); }
 
 /* ---- the shop sheet ---- */
-.shop { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; border-radius: 16px 16px 0 0; padding: 10px 10px 4px; border-bottom: 0; animation: slideup 0.25s ease-out; }
-@keyframes slideup { from { transform: translateY(40%); opacity: 0; } }
+.shop { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom)); background: rgba(0, 0, 0, 0.72); animation: fadein 0.2s ease-out; }
+.sheet { width: min(100%, 540px); max-height: 100%; min-height: 0; display: flex; flex-direction: column; border-radius: 16px; padding: 12px 10px 6px; animation: popin 0.2s ease-out; }
+@keyframes fadein { from { opacity: 0; } }
+@keyframes popin { from { transform: scale(0.92); opacity: 0; } }
 .sh-h { display: flex; align-items: center; gap: 10px; padding: 0 6px 6px; }
 .sh-h .case { width: 30px; color: var(--brass); }
 .sh-h > div { flex: 1; }
